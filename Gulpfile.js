@@ -73,9 +73,12 @@ var config = {
       extensions: ['eot', 'svg', 'ttf', 'woff', 'woff2']
     },
     images:      {
-      path:       './src/Rt/Bundle/AppBundle/Resources/frontend/images',
+      path:       './frontend/images',
       extensions: ['svg', 'jpg', 'jpeg', 'png']
     },
+    bootstrap: {
+      path: './frontend/bootstrap'
+    }
   },
   browsersync:      {
     watch: [
@@ -351,6 +354,12 @@ gulp.task('watch/sync', [
   'browsersync',
   'watch'
 ], _.noop);
+
+gulp.task('bootstrap', function(){
+  var conf = config.dependencies.bootstrap;
+  gulp.src(conf.path + '/**/*', {base: conf.path})
+    .pipe(gulp.dest(config.DEST_PATH + '/bootstrap'))
+});
 gulp.task('watch', [
   'dependencies:js:watch',
   'dependencies:views:watch',
