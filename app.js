@@ -1,14 +1,14 @@
 
 import express from 'express';
 
-//var express = require('express');
-var path = require('path');
-var favicon = require('serve-favicon');
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
+//import express  from 'express'
+import path  from 'path';
+import favicon  from 'serve-favicon';
+import cookieParser  from 'cookie-parser';
+import bodyParser  from 'body-parser';
 import log4js from 'log4js';
 
-var routes = require('./routes/index');
+import routes from './routes/index';
 
 var app = express();
 
