@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "nodemon -e js,twig --ignore test/ ./bin/www"
+    "start": "./node_modules/.bin/nodemon  -e js,twig --ignore test/ --exec \"babel-node bin/www\""
   },
   "author": [
     "Vladimir Odesskij",
