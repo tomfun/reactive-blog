@@ -369,6 +369,7 @@ gulp.task('watch', [
 ], _.noop);
 gulp.task('default', [
   'bower:dependencies',
+  'bootstrap',
   'dependencies:js:build',
   'dependencies:stylesheets:build',
   'dependencies:views:build',
