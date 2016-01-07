@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Page Title</title>
+  {% block styles %}
+    <link rel="stylesheet" href="/compiled/css/general.css">
+  {% endblock %}
+  {% block scripts %}
+    <script>
+      window.twigGlobalVariables = {{ twigGlobalVariables|json_encode|raw }};
+    </script>
+    <script src="/compiled/js/require.js"></script>
+    <script src="/compiled/js/require.js.config.js"></script>
+    <!--script src="/compiled/css/bootstrap/js/bootstrap.min.js"></script-->
+  {% endblock %}
+</head>
+<body>
+<div class="container"  >
+  {% block head_content %}{% endblock %}
+  <div class="row"  id="container">
+  {% block content %}
+    <h1>empty content</h1>
+  {% endblock %}
+    </div>
+</div>
+</body>
+</html>
