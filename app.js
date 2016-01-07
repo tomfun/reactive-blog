@@ -20,7 +20,7 @@ log4js.configure({
 });
 
 var logger = log4js.getLogger('console');
-logger.setLevel('INFO');
+logger.setLevel(log4js.levels.INFO);
 
 app.use(log4js.connectLogger(logger, { level: log4js.levels.INFO, format: ':method :status [:response-time ms] :url ' }));
 
@@ -68,4 +68,4 @@ app.use(function(err, req, res, next) {
 });
 
 
-module.exports = app;
+export default app;
