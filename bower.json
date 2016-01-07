@@ -1,0 +1,47 @@
+{
+  "name": "node-express-gulp-twig",
+  "version": "1.0.0",
+  "authors": [
+    "Vladimir Odesskij <odesskij1992@gmail.com>"
+  ],
+  "moduleType": [
+    "amd"
+  ],
+  "license": "MIT",
+  "resolutions": {
+    "backbone": "1.2.3"
+  },
+  "dependencies": {
+    "requirejs": "~2.1.20",
+    "requirejs-domready": "~2.0.1",
+    "requirejs-plugins": "~1.0.3",
+    "jquery": "~2.1.4",
+    "lodash": "~3.10.1",
+    "backbone": "~1.2.3",
+    "backbone.marionette": "~2.4.3",
+    "backbone-modelbinder": "~0.1.7",
+    "backbone.radio": "~1.0.2",
+    "twig.js": "~0.8.4",
+    "backbone-chaining": "~0.1.4"
+  },
+  "overrides": {
+    "renames": {
+      "Backbone.ModelBinder": "backbone.modelbinder"
+    },
+    "requirejs-domready": {
+      "main": [
+        "domReady.js"
+      ]
+    },
+    "backbone-modelbinder": {
+      "main": [
+        "Backbone.ModelBinder.js"
+      ]
+    },
+    "twig.js": {
+      "main": [
+        "twig.js"
+      ]
+    }
+  }
+}

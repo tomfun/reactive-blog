@@ -2,10 +2,10 @@
 import express from 'express';
 
 //import express  from 'express'
-import path  from 'path';
-import favicon  from 'serve-favicon';
-import cookieParser  from 'cookie-parser';
-import bodyParser  from 'body-parser';
+import path from 'path';
+import favicon from 'serve-favicon';
+import cookieParser from 'cookie-parser';
+import bodyParser from 'body-parser';
 import log4js from 'log4js';
 
 import routes from './routes/index';
@@ -25,7 +25,7 @@ logger.setLevel(log4js.levels.INFO);
 app.use(log4js.connectLogger(logger, { level: log4js.levels.INFO, format: ':method :status [:response-time ms] :url ' }));
 
 // view engine setup
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', path.join(__dirname, 'frontend', 'templates'));
 app.set('view engine', 'twig');
 
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
