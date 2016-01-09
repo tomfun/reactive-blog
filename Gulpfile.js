@@ -138,10 +138,10 @@ gulp.task('bower:dependencies', ['bower:install'], function () {
     .pipe(logger('bower'))
     .pipe(handleRename)
     .pipe(gulpif(function (file) {
-      return config.dependencies.js.minify && require('path').parse(file.path).ext === '.js'
+      return config.dependencies.js.minify && require('path').parse(file.path).ext === '.js';
     }, uglify()))
     .on('error', function () {
-      console.error(arguments)
+      console.error(arguments);
     })
     .pipe(gulp.dest(config.DEST_PATH));
 });
