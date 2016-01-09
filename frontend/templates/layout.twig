@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
+
+  <title>{{ 'title'|upper }}</title>
+
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="keywords" content="{{ 'keywords'|upper }}"/>
   <meta name="description" content="{{ 'description'|upper }}"/>
 
-  <title>{{ 'title'|upper }}</title>
 
   {% block styles %}
     <!-- <link rel="stylesheet" href="/compiled/css/general.css"> -->
@@ -15,11 +18,12 @@
   {% block scripts %}
     <script src="/dependencies/js/require.js"></script>
     <script src="/dependencies/js/config/require.js"></script>
+    <script src="/dependencies/js/app.js"></script>
   {% endblock %}
 </head>
 <body>
 {% block body %}
-
+  <div id="app"></div>
 {% endblock %}
 </body>
 </html>

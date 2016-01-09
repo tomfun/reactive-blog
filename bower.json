@@ -22,7 +22,8 @@
     "backbone-modelbinder": "~0.1.7",
     "backbone.radio": "~1.0.2",
     "twig.js": "~0.8.4",
-    "backbone-chaining": "~0.1.4"
+    "backbone-chaining": "~0.1.4",
+    "react": "~0.14.6"
   },
   "overrides": {
     "renames": {

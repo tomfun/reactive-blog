@@ -43,7 +43,10 @@ var config = {
         plugins: [
           "transform-es2015-modules-amd"
         ],
-        ignore: ['./frontend/javascripts/config/require.js']
+        ignore: [
+          './frontend/javascripts/config/require.js',
+          './frontend/javascripts/app.js'
+        ]
       }
     },
     views:       {
@@ -359,9 +362,38 @@ gulp.task('watch/sync', [
 
 gulp.task('bootstrap', function(){
   var conf = config.dependencies.bootstrap;
-  gulp.src(conf.path + '/**/*', {base: conf.path})
+  return gulp.src(conf.path + '/**/*', {base: conf.path})
     .pipe(gulp.dest(config.DEST_PATH + '/bootstrap'))
 });
+gulp.task('material-ui:copy', function () {
+  return gulp.src('./node_modules/material-ui/lib/**', {
+      base: './node_modules/material-ui/lib'
+    })
+    .pipe(gulp.dest(config.DEST_PATH + '/js/material-ui/lib'))
+})
+gulp.task('material-ui:amdify', ['material-ui:copy'] ,function () {
+
+  var exec = require('exec');
+  var base = __dirname + '/' + config.DEST_PATH + '/js/material-ui';
+
+//r.js -convert public/dependencies/js/material-ui/ public/dependencies/js/material-ui2
+  console.log('NOTICE! npm install -g requirejs', 'r.js is required!')
+  return new Promise(function(resolve, reject) {
+    exec([
+      'r.js',
+      '-convert',
+      'public/dependencies/js/material-ui',
+      'public/dependencies/js/material-ui'
+    ], function(err, out, code) {
+      if (err instanceof Error){
+          throw err;
+      }
+      resolve();
+    });
+  });
+})
+gulp.task('material-ui', ['material-ui:amdify'], _.noop);
+
 gulp.task('watch', [
   'dependencies:js:watch',
   'dependencies:views:watch',
@@ -372,6 +404,7 @@ gulp.task('watch', [
 gulp.task('default', [
   'bower:dependencies',
   'bootstrap',
+  'material-ui',
   'dependencies:js:build',
   'dependencies:stylesheets:build',
   'dependencies:views:build',
