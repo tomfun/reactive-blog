@@ -13,7 +13,7 @@ npm install
 ./node_modules/.bin/gulp
 ```
 
-*(https://babeljs.io/docs/usage/cli/#babel-node)[not recomended usa babel-node]* 
+*[not recomended usa babel-node](https://babeljs.io/docs/usage/cli/#babel-node)*
 
 
 ## Run
