@@ -22,7 +22,6 @@ var gulp            = require('gulp')
   , browserSync     = require('browser-sync')
   , minimatch       = require("minimatch");
 
-
 var logger = function (prefix) {
   return require('gulp-print')(function (filepath) {
     return prefix + ': ' + filepath;
@@ -36,13 +35,15 @@ var config = {
     js:          {
       minify:     env !== 'dev',
       paths:      {
-        '': ['./frontend/javascripts']
+        '': ['./frontend/javascripts'],
+        'components': ['./app/components']
       },
       extensions: ['js', 'es6'],
       babel:      {
-        options: {
-          modules: 'amd'
-        }
+        plugins: [
+          "transform-es2015-modules-amd"
+        ],
+        ignore: ['./frontend/javascripts/config/require.js']
       }
     },
     views:       {
@@ -268,7 +269,8 @@ gulp.task('bower:install', function () {
     };
     gulp.src(path, {base: base})
       .on('error', rejecting)
-      .pipe(gulpif('**/*.es6', babel(conf.babel.options)))
+      //.pipe(gulpif('**/*.es6', babel(conf.babel.options)))
+      .pipe(babel(conf.babel))
       .on('error', rejecting)
       .pipe(gulpif(conf.minify, uglify()))
       .on('error', rejecting)
