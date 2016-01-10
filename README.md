@@ -10,11 +10,9 @@
 
 ```bash
 npm install
-./node_modules/.bin/gulp
+l10ns compile # compile localizations
+./node_modules/.bin/webpack --colors --progress # or add --watch for file-watching
 ```
-
-*[not recomended usa babel-node](https://babeljs.io/docs/usage/cli/#babel-node)*
-
 
 ## Run
 
