@@ -10,9 +10,9 @@ import Paper from 'material-ui/lib/paper';
 import PostForm from '../PostForm/post-form'
 import PostList from '../PostList/post-list'
 
-import Router from '../router';
-
 import _ from 'lodash';
+
+import l from '../../translator';
 
 
 let SelectableList = SelectableContainerEnhance(List);
@@ -35,8 +35,8 @@ class Layout extends Component {
           <div style={{width: '20%', display: 'inline-block', marginRight: '1em'}}>
             <Paper zDepth={1}>
               <SelectableList valueLink={{value: this.state.menu, requestChange: _.bind(this.handleMenu, this)}}>
-                <ListItem primaryText="Новый" value="form" />
-                <ListItem primaryText="Список" value="list" />
+                <ListItem primaryText={l('DASHBOARD->MENU->POST->NEW')} value="form" />
+                <ListItem primaryText={l('DASHBOARD->MENU->POST->LIST')} value="list" />
               </SelectableList>
             </Paper>
           </div>

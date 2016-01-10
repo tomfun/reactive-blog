@@ -5,6 +5,7 @@ import Tabs from 'material-ui/lib/tabs/tabs';
 import Tab from 'material-ui/lib/tabs/tab';
 import RaisedButton from 'material-ui/lib/raised-button';
 import markdown from '../../markdown';
+import l from '../../translator';
 
 import _ from 'lodash';
 
@@ -25,20 +26,20 @@ class PostForm extends Component {
   render(){
     return (
       <Tabs>
-        <Tab label="Редактирование">
+        <Tab label={l('DASHBOARD->POST->FORM->EDIT->TITLE')}>
           <div className="form" style={{padding: '1em'}}>
             <div>
               <TextField
-                value={this.state.title}
                 style={{width: '100%'}}
-                floatingLabelText="Тема"
+                floatingLabelText={l('DASHBOARD->POST->FORM->FIELD->TITLE')}
+                value={this.state.title}
                 onChange={this.databind('title')}
                 />
             </div>
             <div>
               <TextField
                 style={{width: '100%'}}
-                floatingLabelText="Текст"
+                floatingLabelText={l('DASHBOARD->POST->FORM->FIELD->BODY')}
                 multiLine={true}
                 rows={10}
                 value={this.state.body}
@@ -46,22 +47,21 @@ class PostForm extends Component {
                 />
             </div>
             <div>
-              <RaisedButton label="Сохранить" primary={true} />
+              <RaisedButton label={l('DASHBOARD->POST->FORM->SAVE')} primary={true} />
             </div>
           </div>
         </Tab>
-        <Tab label="Предпросмотр">
+        <Tab label={l('DASHBOARD->POST->FORM->PREVIEW->TITLE')}>
             {(() => {
               if(!this.state.body){
                 return (
                   <div style={{padding: '1em'}}>
-                    Контента нет. :(
+                    {l('DASHBOARD->POST->FORM->PREVIEW->NO_CONTENT')}
                   </div>
                 );
               }
               return (
-                <div style={{padding: '1em'}} dangerouslySetInnerHTML={this.convertMarkdown()}>
-                </div>
+                <div style={{padding: '1em'}} dangerouslySetInnerHTML={this.convertMarkdown()} />
               );
             })()}
         </Tab>

@@ -5,3 +5,5 @@ node_modules
 /.idea
 /*.iml
 /public/bundle.js
+/.l10ns
+/app/localizations/output/*

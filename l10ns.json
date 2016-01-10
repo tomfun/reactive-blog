@@ -1,0 +1,27 @@
+{
+  "defaultProject": "reactive-blog",
+  "projects": {
+    "reactive-blog": {
+      "timezones": [
+        "America/Los_Angeles"
+      ],
+      "currencies": [
+        "USD"
+      ],
+      "interface": {
+        "autoOpen": true,
+        "port": 3010
+      },
+      "languages": {
+        "en-US": "English (US)"
+      },
+      "defaultLanguage": "en-US",
+      "programmingLanguage": "javascript",
+      "store": "app/localizations//",
+      "output": "app/localizations//output",
+      "source": [
+        "./app/components/**/*.js"
+      ]
+    }
+  }
+}
