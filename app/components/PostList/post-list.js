@@ -14,7 +14,7 @@ class PostForm extends Component {
   render(){
     return (
       <div className="list">
-            <Table height="300px" fixedHeader={true}>
+            <Table height="300px" fixedHeader={true} selectable={false}>
             <TableHeader displaySelectAll={false}>
               <TableRow>
                 <TableHeaderColumn colSpan="2" tooltip='Список постов' style={{textAlign: 'center'}}>

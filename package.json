@@ -44,6 +44,7 @@
     "lodash": "^3.10.1",
     "log4js": "^0.6.29",
     "main-bower-files": "^2.11.1",
+    "marked": "^0.3.5",
     "material-ui": "^0.14.2",
     "minimatch": "^3.0.0",
     "react": "^0.14.5",

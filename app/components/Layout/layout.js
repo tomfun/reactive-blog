@@ -10,6 +10,8 @@ import Paper from 'material-ui/lib/paper';
 import PostForm from '../PostForm/post-form'
 import PostList from '../PostList/post-list'
 
+import Router from '../router';
+
 import _ from 'lodash';
 
 
