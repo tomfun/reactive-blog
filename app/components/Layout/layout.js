@@ -28,7 +28,7 @@ class Layout extends Component {
     return (
       <div className="layout">
         <AppBar
-          title="Dashboard"
+          title={l('DASHBOARD->TITLE')}
           iconClassNameRight="muidocs-icon-navigation-expand-more"
         />
         <div style={{paddingTop: '1em'}}>
