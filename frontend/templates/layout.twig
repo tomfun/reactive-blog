@@ -11,14 +11,11 @@
   <meta name="keywords" content="{{ 'keywords'|upper }}"/>
   <meta name="description" content="{{ 'description'|upper }}"/>
 
-
   {% block styles %}
     <!-- <link rel="stylesheet" href="/compiled/css/general.css"> -->
   {% endblock %}
   {% block scripts %}
-    <script src="/dependencies/js/require.js"></script>
-    <script src="/dependencies/js/config/require.js"></script>
-    <script src="/dependencies/js/app.js"></script>
+    <script src="/bundle.js"></script>
   {% endblock %}
 </head>
 <body>
