@@ -14,6 +14,11 @@ l10ns compile # compile localizations
 ./node_modules/.bin/webpack --colors --progress # or add --watch for file-watching
 ```
 
+or
+
+```bash
+npm install; npm run build;
+```
 ## Run
 
 ```bash
