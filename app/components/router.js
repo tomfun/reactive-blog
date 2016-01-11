@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import { Router, Route, Link, IndexRoute, browserHistory } from 'react-router';
+import { Router, Route, Link, IndexRedirect, browserHistory } from 'react-router';
 
 import Layout from './Layout/layout'
 import PostForm from './PostForm/post-form';
@@ -9,7 +9,7 @@ export default () => {
   return (
     <Router history={browserHistory}>
        <Route path="/" component={Layout}>
-         <IndexRoute component={PostForm} />
+         <IndexRedirect to="post/form" />
          <Route path="post/form" component={PostForm}/>
          <Route path="post/list" component={PostList}/>
        </Route>
