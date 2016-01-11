@@ -1,11 +1,22 @@
 [
   {
     "files": [
+      "./app/components/NotFound/not-found.js"
+    ],
+    "id": "MGMRjobxH5",
+    "key": "NOT_FOUND->TITLE",
+    "new": true,
+    "timestamp": "2016-01-11T00:13:03.256Z",
+    "value": "Page not found! 404 :(",
+    "variables": []
+  },
+  {
+    "files": [
       "./app/components/Layout/layout.js"
     ],
     "id": "qo65k66Xu8",
     "key": "DASHBOARD->TITLE",
-    "new": true,
+    "new": false,
     "timestamp": "2016-01-10T22:29:40.185Z",
     "value": "Dashboard",
     "variables": []
