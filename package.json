@@ -43,6 +43,7 @@
     "gulp-uglify": "^1.5.1",
     "gulp-util": "^3.0.7",
     "gulp-watch": "^4.3.5",
+    "history": "^1.17.0",
     "l10ns": "^2.2.5",
     "lodash": "^3.10.1",
     "log4js": "^0.6.29",

@@ -13,7 +13,7 @@ import PostList from '../PostList/post-list'
 import _ from 'lodash';
 
 import l from '../../translator';
-import Router, {Link, transitionTo} from 'react-router';
+import Router, {Link} from 'react-router';
 
 let SelectableList = SelectableContainerEnhance(List);
 
