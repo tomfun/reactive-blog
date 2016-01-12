@@ -1,31 +1,18 @@
-class Model {
-  create() {
-  }
+import manager, { entity, field, join } from '../app/helpers/elasticManager';
 
-  static find() {
-    console.log(arguments)
-  }
+@field("name", "string")
+@field("email", "string")
+@entity("user")
+class User
+{
 
-  save() {
-  }
 }
-
-function entity(options) {
-  options.elastica_meta
-  return function (target) {
-    console.log('user', target, options.elastica_meta)
-  }
-}
-
-@entity({
-  "elastica_meta": 123
-})
-class User extends Model {
+@field("content", field.TYPE.OBJECT)
+@join("author", User)
+@entity("post")
+class Post
+{
 
 }
 
-
-
-User.find({ where: {
-  name: 1
-}})
+manager.createType();
