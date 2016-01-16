@@ -4,26 +4,26 @@ import TextField from 'material-ui/lib/text-field';
 import Tabs from 'material-ui/lib/tabs/tabs';
 import Tab from 'material-ui/lib/tabs/tab';
 import RaisedButton from 'material-ui/lib/raised-button';
-import markdown from '../../markdown';
 import l from '../../translator';
+
+import Markdown from '../Markdown/markdown'
 
 import _ from 'lodash';
 
 class PostForm extends Component {
-  databind(property){
+  databind(property) {
     return (event) => {
-       this.setState(_.extend({}, this.state, {
-         [property]: event.target.value
-       }));
+      this.setState(_.extend({}, this.state, {
+        [property]: event.target.value
+      }));
     }
   }
-  convertMarkdown(){
-    return { __html: markdown(this.state.body, {sanitize: true}) };
-  }
-  componentWillMount(){
+
+  componentWillMount() {
     this.setState({title: '', body: ''})
   }
-  render(){
+
+  render() {
     return (
       <Tabs>
         <Tab label={l('DASHBOARD->POST->FORM->EDIT->TITLE')}>
@@ -47,23 +47,27 @@ class PostForm extends Component {
                 />
             </div>
             <div>
-              <RaisedButton label={l('DASHBOARD->POST->FORM->SAVE')} primary={true} />
+              <RaisedButton label={l('DASHBOARD->POST->FORM->SAVE')} primary={true}/>
             </div>
           </div>
         </Tab>
         <Tab label={l('DASHBOARD->POST->FORM->PREVIEW->TITLE')}>
-            {(() => {
-              if(!this.state.body){
-                return (
-                  <div style={{padding: '1em'}}>
-                    {l('DASHBOARD->POST->FORM->PREVIEW->NO_CONTENT')}
-                  </div>
-                );
-              }
+          {(() => {
+            if(!this.state.body) {
               return (
-                <div style={{padding: '1em'}} dangerouslySetInnerHTML={this.convertMarkdown()} />
+                <div style={{padding: '1em'}}>
+                  {l('DASHBOARD->POST->FORM->PREVIEW->NO_CONTENT')}
+                </div>
               );
-            })()}
+            }
+            return (
+              <div style={{padding: '1em'}}>
+                <Markdown>
+                  {this.state.body}
+                </Markdown>
+              </div>
+            );
+          })()}
         </Tab>
       </Tabs>
     );
