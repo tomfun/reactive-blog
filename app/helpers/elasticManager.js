@@ -34,8 +34,9 @@ var manager = {
     });
   },
   /**
-   * @param {String} [opt.index]
-   * @param {Class|String} opt.type
+   * @param {Class|String} opt.class override opt.type and opt.index
+   * @param {String} opt.type
+   * @param {String} opt.index
    * @param {Number} [opt.size]
    * @param {Object} [opt.body] Or we pass search body, or field(s) to build body
    * @return {Promise}
@@ -70,38 +71,34 @@ var manager = {
         });
       });
     }
-    if (opt.type) {
-      if (!_.isString(opt.type)) {
-        opt.type = entities.findByClass(opt.type).name
-      }
-    }
-    if (!opt.index) {
-      opt.index = manager.indexName;
+    if (opt.class) {
+      let mData = entities[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.class)
+      opt.type = mData.type;
+      opt.index = mData.index;
     }
     client.search(opt).then(manager.transformResult)
   },
   create: function (mappedObject) {
 
   },
-  createType: function () {
-    return _.map(entities, function (md) {
+  createTypes: function () {
+    return Promise.all(_.map(entities, function (md) {
       /**
        * @type {MetaData}
        */
-      return md.existType(client, manager.indexName).then(function (d) {
-        return d ? md.putType(client, manager.indexName) : md.createType(client, manager.indexName);
-      }).then(function (some) {
-        console.log('ssssssss', some)
+      return md.existType(client).then(function (d) {
+        return d ? md.putType(client) : md.createType(client);
       }).catch(function (e) {
-        console.error(e, e.stack)
-      })
-    })
+        console.error(e, e.stack);
+      });
+    }));
   }
 };
 
-export function entity(name) {
+export function entity(name, index, type) {
   return function (target) {
-    entities.add(new MetaData(name, target));
+    index = index || 'config_index_' + name;//todo
+    entities.add(new MetaData(name, target, {}, index, type));
     console.log('test', target, name);
     return target;
   };
@@ -112,7 +109,7 @@ export function field(name, type) {
     console.log('test2', target, name);
     var md;
     if (!(md = entities.findByClass(target))) {
-      throw new Error("target not found")
+      throw new Error("target not found");
     }
     //_.set(md.mappings, name, type);
     name = _.isArray(name) ? name : name.split('.');
@@ -183,7 +180,8 @@ export function join(name, cls) {
           Object.defineProperty(this, 'dataValues', {
             configurable: false,
             enumerable: false,
-            writable: false
+            writable: false,
+            value: {}
           });
         }
         this.dataValues[name] = val;

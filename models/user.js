@@ -15,4 +15,13 @@ class Post
 
 }
 
-manager.createType();
+manager.createTypes();
+
+
+setTimeout(function () {
+  console.log(Post);
+  var p = new Post();
+  console.log(p);
+  p.author = new User();
+  console.log(p);
+}, 5000)

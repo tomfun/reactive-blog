@@ -1,7 +1,9 @@
 export default class MetaData {
-  constructor(name, cls, mappings) {
+  constructor(name, cls, mappings, index, type) {
     this.name = name;
     this.class = cls;
+    this.index = index;
+    this.type = type || name;
     this.mappings = mappings || {};
   }
 
@@ -13,10 +15,10 @@ export default class MetaData {
     };
   }
 
-  createType(client, indexName) {
+  createType(client) {
     let args = {
-      index: indexName,
-      type: this.name,
+      index: this.index,
+      type: this.type,
       body: {
         mappings: this.getMappings()
       }
@@ -24,19 +26,19 @@ export default class MetaData {
     return client.indices.create(args);
   }
 
-  putType(client, indexName) {
+  putType(client) {
     let args = {
-      index: indexName,
-      type: this.name,
+      index: this.index,
+      type: this.type,
       body: this.getMappings()
     };
     return client.indices.putMapping(args);
   }
 
-  existType(client, indexName) {
+  existType(client) {
     return client.indices.exists({
-      index: indexName,
-      type: this.name,
+      index: this.index,
+      type: this.type,
     });
   }
 }
