@@ -5,6 +5,7 @@ export default class MetaData {
     this.index = index;
     this.type = type || name;
     this.mappings = mappings || {};
+    this.joins = [];
   }
 
   getMappings() {
@@ -39,6 +40,15 @@ export default class MetaData {
     return client.indices.exists({
       index: this.index,
       type: this.type,
+    });
+  }
+
+  create(client, json) {
+    return client.create({
+      index: this.index,
+      type: this.type,
+      id: json.id,
+      body: json
     });
   }
 }
