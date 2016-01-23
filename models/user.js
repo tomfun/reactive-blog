@@ -32,15 +32,20 @@ setTimeout(function () {
   //console.log("\n\n\n")
   //manager.create(p);
 
-  //manager.findOne({class: Post, id: 'e1h_y9nde'}).then(function (data) {
+  //manager.findOne({Class: Post, id: 'e1h_y9nde'}).then(function (data) {
   //  console.log(data)
   //});
 
-  manager.findById({class: Post, id: 'E1H_Y9nde'}).then(function (data) {
-    console.log(data)
+  manager.findById({Class: Post, id: 'E1H_Y9nde'}).then(function (post) {
+    console.log('%%%%%%%', post)
+    return post.author.then(function (author) {
+      console.log(author)
+    })
+  }).catch(function (some) {
+    console.error(some, some.stack)
   });
 
-  //manager.findOne({class: Post}).then(function (data) {
+  //manager.findOne({Class: Post}).then(function (data) {
   //  console.log(data)
   //});
-}, 2000)
+}, 1000)

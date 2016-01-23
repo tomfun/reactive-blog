@@ -1,7 +1,7 @@
 export default class JoinMetadata {
   constructor(name, cls, fieldName) {
     this.name = name;
-    this.class = cls;
+    this.Class = cls;
     this.fieldName = fieldName;
   }
 }

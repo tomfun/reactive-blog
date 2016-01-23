@@ -9,13 +9,25 @@ client.ping().then(function () {
   console.log('ping sucess')
 })
 
+//_.memoize.Cache = WeakMap; ?!
+
 var entities = [];
 entities.findByName = function (name) {
-  return _.findWhere(this, {name: name});
+  return _.find(this, {
+    name
+  });
 };
 entities.findByClass = function (cls) {
-  return _.findWhere(this, {class: cls});
+  return _.find(this, {Class: cls});
 };
+entities.findByIndexAndType = _.memoize(function (index, type) {
+  return _.find(entities, {
+    index,
+    type
+  });
+}, function (index, type) {
+  return index + type;
+});
 entities.add = function (metaData) {
   if (!(metaData instanceof MetaData)) {
     throw new TypeError("metaData is not instanceof MetaData");
@@ -25,14 +37,44 @@ entities.add = function (metaData) {
 
 var manager = {
   indexName:             'reactive_blog_',//todo
-  transformResult: function (data) {
-    return data;
+  transformSingleResult: function (data, includeInfo) {
+    let md = entities.findByIndexAndType(data._index, data._type);
+    if (!md) {
+      return includeInfo ? data : data._source;
+    }
+    let resultObject = new md.Class();
+    let relationFields = _.map(md.joins, 'fieldName');
+    _.extend(resultObject, _.omit(data._source, relationFields));
+    _.each(relationFields, function (fieldName) {
+      if (!('dataValues' in resultObject)) {
+        try {
+          resultObject[md.joins[0].name] = undefined;
+        } catch (e) {
+          //all is ok
+          //initialize dataValues field
+        }
+      }
+      if (data._source[fieldName] !== undefined) {
+        resultObject.dataValues[fieldName] = data._source[fieldName];
+      }
+    });
+    if (includeInfo) {
+      resultObject._info = _.omit(data, ['_source', '_index', '_type']);
+    }
+    return resultObject;
   },
-  transformGetResult: function (data) {
-    return manager.transformResult(data._source);
+  transformResult:       function (data, includeInfo) {
+    return _.isArray(data)
+      ? _.map(data, function (item) {
+        return manager.transformSingleResult(item, includeInfo);
+      })
+      : manager.transformSingleResult(data, includeInfo);
   },
-  transformSearchResult: function (data) {
-    return manager.transformResult(_.pluck(data.hits.hits, '_source'));
+  transformGetResult:    function (data, includeInfo) {
+    return manager.transformResult(data, includeInfo);
+  },
+  transformSearchResult: function (data, includeInfo) {
+    return manager.transformResult(data.hits.hits, includeInfo);
   },
   /**
    * @param {Class|String} [opt.class] override opt.type and opt.index
@@ -42,11 +84,11 @@ var manager = {
    * @return {Promise<Object|null>}
    */
   findById:              function (opt) {
-    if (opt.class) {
-      let mData = entities[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.class)
+    if (opt.Class) {
+      let mData = entities[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.Class)
       opt.type = mData.type;
       opt.index = mData.index;
-      delete opt.class;
+      delete opt.Class;
     }
     return client.get(opt).then(manager.transformGetResult);
   },
@@ -75,7 +117,7 @@ var manager = {
   find:                  function (opt) {
     if (!opt.body) {
       let and = [];
-      _.each(_.omit(opt, ['class', 'index', 'type', 'size', 'body']), function (val, fieldName) {
+      _.each(_.omit(opt, ['Class', 'index', 'type', 'size', 'body']), function (val, fieldName) {
         and.push({
           term: {
             [fieldName]: val
@@ -89,28 +131,28 @@ var manager = {
             filtered: {
               filter: {
                 and: and/*[
-                  {
-                    term: {
-                      "user.cityId": inputQuery.cityId
-                    }
-                  },
-                  {
-                    term: {
-                      "canWork": true
-                    }
-                  }
-                ]*/
+                 {
+                 term: {
+                 "user.cityId": inputQuery.cityId
+                 }
+                 },
+                 {
+                 term: {
+                 "canWork": true
+                 }
+                 }
+                 ]*/
               }
             }
           }
         };
       }
     }
-    if (opt.class) {
-      let mData = entities[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.class)
+    if (opt.Class) {
+      let mData = entities[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.Class)
       opt.type = mData.type;
       opt.index = mData.index;
-      delete opt.class;
+      delete opt.Class;
     }
     return client.search(opt).then(manager.transformSearchResult);
   },
@@ -150,7 +192,7 @@ var manager = {
     });
     return result;
   },
-  createTypes: function () {
+  createTypes:           function () {
     return Promise.all(_.map(entities, function (md) {
       /**
        * @type {MetaData}
@@ -168,7 +210,6 @@ export function entity(name, index, type) {
   return function (target) {
     index = index || manager.indexName + name;
     entities.add(new MetaData(name, target, {}, index, type));
-    console.log('test', target, name);
     return target;
   };
 }
@@ -182,8 +223,8 @@ export function field(name, type) {
     }
     //_.set(md.mappings, name, type);
     name = _.isArray(name) ? name : name.split('.');
-    let mp = md.mappings,
-      len = name.length;
+    let mp  = md.mappings,
+        len = name.length;
     _.each(name, function (v, i) {
       if (!mp[v]) {
         mp[v] = {
@@ -204,24 +245,24 @@ export function field(name, type) {
  * @url https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html
  */
 const FIELD_TYPES = {
-  "STRING": "string",
-  "LONG": "long",
-  "INTEGER": "integer",
-  "SHORT": "short",
-  "BYTE": "byte",
-  "DOUBLE": "double",
-  "FLOAT": "float",
-  "DATE": "date",
-  "BOOLEAN": "boolean",
-  "BINARY": "binary",
-  "OBJECT": "object",
-  "NESTED": "nested",
-  "GEO_POINT": "geo_point",
-  "GEO_SHAPE": "geo_shape",
-  "IP": "ip",
-  "COMPLETION": "completion",
+  "STRING":      "string",
+  "LONG":        "long",
+  "INTEGER":     "integer",
+  "SHORT":       "short",
+  "BYTE":        "byte",
+  "DOUBLE":      "double",
+  "FLOAT":       "float",
+  "DATE":        "date",
+  "BOOLEAN":     "boolean",
+  "BINARY":      "binary",
+  "OBJECT":      "object",
+  "NESTED":      "nested",
+  "GEO_POINT":   "geo_point",
+  "GEO_SHAPE":   "geo_shape",
+  "IP":          "ip",
+  "COMPLETION":  "completion",
   "TOKEN_COUNT": "token_count",
-  "MURMUR3": "murmur3"
+  "MURMUR3":     "murmur3"
 };
 field.TYPE = FIELD_TYPES;
 
@@ -240,28 +281,27 @@ export function join(name, cls, fieldName) {
     targetMetadata.joins.push(new JoinMetadata(name, cls, fieldName));
     Object.defineProperty(target.prototype, name, {
       configurable: true,
-      enumerable: true,
-      get: function () {
+      enumerable:   true,
+      get:          function () {
         if ('dataValues' in this && name in this.dataValues) {
           return Promise.resolve(this.dataValues[name]);
         }
         if ('dataValues' in this && fieldName in this.dataValues) {
           return manager.findById({
-            class: cls,
-            id: this.dataValues[fieldName],
-            //todo: size
+            Class: cls,
+            id:    this.dataValues[fieldName],
           }).then(function (transformedData) {
-            this[name] = transformedData;
-          });
+            return this[name] = transformedData;
+          }.bind(this));
         }
       },
-      set: function (val) {
+      set:          function (val) {
         if (!('dataValues' in this)) {
           Object.defineProperty(this, 'dataValues', {
             configurable: false,
-            enumerable: false,
-            writable: false,
-            value: {}
+            enumerable:   false,
+            writable:     false,
+            value:        {}
           });
         }
         if (!(val instanceof cls)) {
