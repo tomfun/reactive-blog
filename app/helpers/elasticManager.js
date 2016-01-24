@@ -1,9 +1,10 @@
-import shortid from 'shortid';
-import _ from 'lodash';
+import shortid from "shortid";
+import _ from "lodash";
 
-import MetaData from './elastic/Metadata';
-import JoinMetadata from './elastic/JoinMetadata';
-import client from './elastic/client';
+import MetaData from "./elastic/Metadata";
+import MetadataCollection from "./elastic/MetadataCollection";
+import JoinMetadata from "./elastic/JoinMetadata";
+import client from "./elastic/client";
 
 client.ping().then(function () {
   console.log('ping sucess')
@@ -11,39 +12,20 @@ client.ping().then(function () {
 
 //_.memoize.Cache = WeakMap; ?!
 
-var entities = [];
-entities.findByName = function (name) {
-  return _.find(this, {
-    name
-  });
-};
-entities.findByClass = function (cls) {
-  return _.find(this, {Class: cls});
-};
-entities.findByIndexAndType = _.memoize(function (index, type) {
-  return _.find(entities, {
-    index,
-    type
-  });
-}, function (index, type) {
-  return index + type;
-});
-entities.add = function (metaData) {
-  if (!(metaData instanceof MetaData)) {
-    throw new TypeError("metaData is not instanceof MetaData");
-  }
-  return this.push(metaData);
-};
+let entityMetas = new MetadataCollection();
+console.log("\n\n\n#############\n", entityMetas.__proto__.__proto__)
+process.exit(1)
+let rawSources = new WeakMap();
 
 var manager = {
-  indexName:             'reactive_blog_',//todo
+  indexName:             "reactive_blog_", //todo
   transformSingleResult: function (data, includeInfo) {
-    let md = entities.findByIndexAndType(data._index, data._type);
+    let md = entityMetas.findByIndexAndType(data._index, data._type);
     if (!md) {
       return includeInfo ? data : data._source;
     }
     let resultObject = new md.Class();
-    let relationFields = _.map(md.joins, 'fieldName');
+    let relationFields = _.map(md.joins, "fieldName");
     _.extend(resultObject, _.omit(data._source, relationFields));
     _.each(relationFields, function (fieldName) {
       if (!('dataValues' in resultObject)) {
@@ -66,8 +48,8 @@ var manager = {
   transformResult:       function (data, includeInfo) {
     return _.isArray(data)
       ? _.map(data, function (item) {
-        return manager.transformSingleResult(item, includeInfo);
-      })
+      return manager.transformSingleResult(item, includeInfo);
+    })
       : manager.transformSingleResult(data, includeInfo);
   },
   transformGetResult:    function (data, includeInfo) {
@@ -77,7 +59,7 @@ var manager = {
     return manager.transformResult(data.hits.hits, includeInfo);
   },
   /**
-   * @param {Class|String} [opt.class] override opt.type and opt.index
+   * @param {Class|String} [opt.Class] override opt.type and opt.index
    * @param {String} [opt.type]
    * @param {String} [opt.index]
    * @param {String} opt.id
@@ -85,7 +67,7 @@ var manager = {
    */
   findById:              function (opt) {
     if (opt.Class) {
-      let mData = entities[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.Class)
+      let mData = entityMetas[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.Class);
       opt.type = mData.type;
       opt.index = mData.index;
       delete opt.Class;
@@ -93,7 +75,7 @@ var manager = {
     return client.get(opt).then(manager.transformGetResult);
   },
   /**
-   * @param {Class|String} [opt.class] override opt.type and opt.index
+   * @param {Class|String} [opt.Class] override opt.type and opt.index
    * @param {String} [opt.type]
    * @param {String} [opt.index]
    * @param {Number} [opt.size]
@@ -107,7 +89,7 @@ var manager = {
     });
   },
   /**
-   * @param {Class|String} [opt.class] override opt.type and opt.index
+   * @param {Class|String} [opt.Class] override opt.type and opt.index
    * @param {String} [opt.type]
    * @param {String} [opt.index]
    * @param {Number} [opt.size]
@@ -149,7 +131,7 @@ var manager = {
       }
     }
     if (opt.Class) {
-      let mData = entities[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.Class)
+      let mData = entityMetas[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.Class)
       opt.type = mData.type;
       opt.index = mData.index;
       delete opt.Class;
@@ -158,7 +140,7 @@ var manager = {
   },
   create:                function (mappedObject) {
     //todo: check Object is mapped
-    let metadata = entities.findByClass(mappedObject.constructor);
+    let metadata = entityMetas.findByClass(mappedObject.constructor);
     if (!metadata) {
       throw new TypeError('Target type not found');
     }
@@ -192,8 +174,25 @@ var manager = {
     });
     return result;
   },
-  createTypes:           function () {
-    return Promise.all(_.map(entities, function (md) {
+  remove(mappedObject) {
+    let metadata = entityMetas.findByClass(mappedObject.constructor);
+    if (!metadata) {
+      throw new TypeError('Type not found');
+    }
+    return metadata.remove(client, mappedObject.id);
+    //todo: cascade delete
+  },
+  detach(mappedObject) {
+
+  },
+  refresh(mappedObject) {
+
+  },
+  update(mappedObject, noRecursive) {
+
+  },
+  createTypes() {
+    return Promise.all(_.map(entityMetas, function (md) {
       /**
        * @type {MetaData}
        */
@@ -209,26 +208,25 @@ var manager = {
 export function entity(name, index, type) {
   return function (target) {
     index = index || manager.indexName + name;
-    entities.add(new MetaData(name, target, {}, index, type));
+    entityMetas.add(new MetaData(name, target, {}, index, type));
     return target;
   };
 }
 
 export function field(name, type) {
   return function (target) {
-    console.log('test2', target, name);
-    var md;
-    if (!(md = entities.findByClass(target))) {
+    let md;
+    if (!(md = entityMetas.findByClass(target))) {
       throw new Error("target not found");
     }
     //_.set(md.mappings, name, type);
-    name = _.isArray(name) ? name : name.split('.');
+    name = _.isArray(name) ? name : name.split(".");
     let mp  = md.mappings,
         len = name.length;
     _.each(name, function (v, i) {
       if (!mp[v]) {
         mp[v] = {
-          "type": "object"
+          type: "object"
         };
       }
       if (i + 1 === len) {
@@ -237,7 +235,7 @@ export function field(name, type) {
         mp = !mp[v].properties ? mp[v].properties = {} : mp[v].properties;
       }
     });
-    console.log('ddd', md.mappings)
+    console.log("ddd", md.mappings)
     return target;
   };
 }
@@ -245,24 +243,24 @@ export function field(name, type) {
  * @url https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html
  */
 const FIELD_TYPES = {
-  "STRING":      "string",
-  "LONG":        "long",
-  "INTEGER":     "integer",
-  "SHORT":       "short",
-  "BYTE":        "byte",
-  "DOUBLE":      "double",
-  "FLOAT":       "float",
-  "DATE":        "date",
-  "BOOLEAN":     "boolean",
-  "BINARY":      "binary",
-  "OBJECT":      "object",
-  "NESTED":      "nested",
-  "GEO_POINT":   "geo_point",
-  "GEO_SHAPE":   "geo_shape",
-  "IP":          "ip",
-  "COMPLETION":  "completion",
-  "TOKEN_COUNT": "token_count",
-  "MURMUR3":     "murmur3"
+  STRING:      "string",
+  LONG:        "long",
+  INTEGER:     "integer",
+  SHORT:       "short",
+  BYTE:        "byte",
+  DOUBLE:      "double",
+  FLOAT:       "float",
+  DATE:        "date",
+  BOOLEAN:     "boolean",
+  BINARY:      "binary",
+  OBJECT:      "object",
+  NESTED:      "nested",
+  GEO_POINT:   "geo_point",
+  GEO_SHAPE:   "geo_shape",
+  IP:          "ip",
+  COMPLETION:  "completion",
+  TOKEN_COUNT: "token_count",
+  MURMUR3:     "murmur3",
 };
 field.TYPE = FIELD_TYPES;
 
@@ -274,19 +272,19 @@ field.TYPE = FIELD_TYPES;
  */
 export function join(name, cls, fieldName) {
   if (fieldName === undefined) {
-    fieldName = name + 'Id';
+    fieldName = name + "Id";
   }
   return function (target) {
-    let targetMetadata = entities.findByClass(target);
+    let targetMetadata = entityMetas.findByClass(target);
     targetMetadata.joins.push(new JoinMetadata(name, cls, fieldName));
     Object.defineProperty(target.prototype, name, {
       configurable: true,
       enumerable:   true,
       get:          function () {
-        if ('dataValues' in this && name in this.dataValues) {
+        if ("dataValues" in this && name in this.dataValues) {
           return Promise.resolve(this.dataValues[name]);
         }
-        if ('dataValues' in this && fieldName in this.dataValues) {
+        if ("dataValues" in this && fieldName in this.dataValues) {
           return manager.findById({
             Class: cls,
             id:    this.dataValues[fieldName],
@@ -296,8 +294,8 @@ export function join(name, cls, fieldName) {
         }
       },
       set:          function (val) {
-        if (!('dataValues' in this)) {
-          Object.defineProperty(this, 'dataValues', {
+        if (!("dataValues" in this)) {
+          Object.defineProperty(this, "dataValues", {
             configurable: false,
             enumerable:   false,
             writable:     false,
@@ -305,7 +303,7 @@ export function join(name, cls, fieldName) {
           });
         }
         if (!(val instanceof cls)) {
-          throw new TypeError('Wrong type of value for ' + name + ' field in ' + targetMetadata.name);
+          throw new TypeError("Wrong type of value for " + name + " field in " + targetMetadata.name);
         }
         this.dataValues[name] = val;
         return this;
