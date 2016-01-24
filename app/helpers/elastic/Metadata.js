@@ -51,4 +51,12 @@ export default class MetaData {
       body: json
     });
   }
+
+  remove(client, json) {
+    return client.delete({
+      index: this.index,
+      type: this.type,
+      id: json.id,
+    });
+  }
 }
