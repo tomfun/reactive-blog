@@ -11,16 +11,13 @@ export default function tripleBad(obj, oldObj, newObj, entityMetas) {
     if (obj.hasOwnProperty(key)) {
       let curValue = obj[key];
       if (_.isObject(curValue)) {//?
-        if (_.isObject(oldObj[key]) && _.isObject(newObj[key])) {
-          console.log("  ##")
-          tripleBad(obj[key], oldObj[key], newObj[key], entityMetas);
-        } else if (_.isObject(oldObj[key]) && !_.isObject(newObj[key])) {
-          if (_.isEqual(obj[key], oldObj[key])) {
+        if (_.isObject(oldObj[key])) {
+          if (_.isObject(newObj[key]) && !_.isArray(newObj[key])) {
+            tripleBad(obj[key], oldObj[key], newObj[key], entityMetas);
+          } else if (_.isEqual(obj[key], oldObj[key])) {
             obj[key] = newObj[key];
-          }// else or ignore changes
-        } /*else if (!_.isObject(oldObj[key]) && !_.isObject(newObj[key])) {
-         //or ignore changes
-        }*/
+          }
+        }
       } else {
         if (curValue === oldObj[key] && curValue !== newObj[key]) {
           if (key in newObj) {
