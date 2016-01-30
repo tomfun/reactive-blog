@@ -12,7 +12,7 @@ function clear() {
     if (value.ttl <= now) {
       clearKeys.add(key);
     } else {
-      minTime = Math.min(minTime, value.ttl - now)
+      minTime = Math.min(minTime, value.ttl - now);
     }
   }
   for (let item of clearKeys) {
@@ -24,8 +24,8 @@ function clear() {
 function scheduleClear() {
   process.nextTick(function () {
     if (timer) {return;}
-    timer = setTimeout(clear, minTime)
-  })
+    timer = setTimeout(clear, minTime);
+  });
 }
 
 export default {
