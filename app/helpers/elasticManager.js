@@ -6,31 +6,42 @@ import MetadataCollection from "./elastic/MetadataCollection";
 import JoinMetadata from "./elastic/JoinMetadata";
 import client from "./elastic/client";
 import simpleCacher from "./elastic/simpleCacher";
+import tripleBad from "./elastic/tripleBad";
 
 client.ping().then(function () {
   console.log('ping sucess')
 })
 
-//_.memoize.Cache = WeakMap; ?!
+/**
+ * @url https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html
+ */
+const FIELD_TYPES = {
+  STRING:      "string",
+  LONG:        "long",
+  INTEGER:     "integer",
+  SHORT:       "short",
+  BYTE:        "byte",
+  DOUBLE:      "double",
+  FLOAT:       "float",
+  DATE:        "date",
+  BOOLEAN:     "boolean",
+  BINARY:      "binary",
+  OBJECT:      "object",
+  NESTED:      "nested",
+  GEO_POINT:   "geo_point",
+  GEO_SHAPE:   "geo_shape",
+  IP:          "ip",
+  COMPLETION:  "completion",
+  TOKEN_COUNT: "token_count",
+  MURMUR3:     "murmur3",
+  //todo: VIRTUAL
+};
+field.TYPE = FIELD_TYPES;
 
-let entityMetas = new MetadataCollection();
-let rawSources = new WeakMap();
-let cacheKeys = new WeakMap();
-let relations = new WeakMap();
-
-//function tripleBad(obj, oldObj, newObj) {
-//  for(let key in obj) {
-//    if (obj.hasOwnProperty(key)) {
-//      if (_.isObject(obj[key])) {//?
-//        if (_.isObject(oldObj[key]) && _.isObject(newObj[key])) {
-//          tripleBad(obj[key], oldObj[key], newObj[key]);
-//        } else if () {
-//
-//        }
-//      }
-//    }
-//  }
-//}
+const entityMetas = new MetadataCollection();
+const rawSources = new WeakMap();
+const cacheKeys = new WeakMap();
+const relations = new WeakMap();
 
 var manager = {
   indexName:             "reactive_blog_", //todo
@@ -39,23 +50,23 @@ var manager = {
     let resultObject = simpleCacher.get(cacheKey);
     if (resultObject && !refreshEntity) {
       let oldSource = rawSources.get(cacheKey);
-      //todo: merge unchanged tripleBad
+      tripleBad(resultObject, oldSource, data, entityMetas);
       rawSources.set(resultObject, data);
       return resultObject;
     }
-    let md = entityMetas.findByIndexAndType(data._index, data._type);
+    const md = entityMetas.findByIndexAndType(data._index, data._type);
     if (!md) {
       return data._source;
     }
     if (!refreshEntity) {
       resultObject = new md.Class();
     }
-    let relationFields = _.map(md.joins, "fieldName");
+    const relationFields = _.map(md.joins, "fieldName");
     _.extend(resultObject, _.omit(data._source, relationFields));
-    let relatedValues = new Map();
+    const relatedValues = new Map();
     _.each(relationFields, function (fieldName) {
       if (data._source[fieldName] !== undefined) {
-        relatedValues[fieldName] = data._source[fieldName];
+        relatedValues.set(fieldName, data._source[fieldName]);
       }
     });
     if (relatedValues.size) {
@@ -70,42 +81,50 @@ var manager = {
 
     return resultObject;
   },
-  transformResult:       function (data) {
+  transformResult(data) {
     return _.isArray(data)
-      ? _.map(data, function (item) {
-      return manager.transformSingleResult(item);
-    })
+      ? _.map(data, (item) => manager.transformSingleResult(item))
       : manager.transformSingleResult(data);
   },
-  transformGetResult:    function (data) {
-    return manager.transformResult(data);
+  transformGetResult(data) {
+    return manager.transformResult(data.docs ? data.docs : data);
   },
-  transformSearchResult: function (data) {
+  transformSearchResult(data) {
     return manager.transformResult(data.hits.hits);
   },
   /**
    * @param {Class|String} [opt.Class] override opt.type and opt.index
    * @param {String} [opt.type]
    * @param {String} [opt.index]
-   * @param {String} opt.id
+   * @param {String|Array<String>} opt.id
    * @return {Promise<Object|null>}
    */
-  findById:              function (opt) {
+  findById(opt) {
     let mData;
-    if (opt.Class) {
-      mData = entityMetas[_.isString(opt.Class) ? 'findByName' : 'findByClass'](opt.Class);
-      opt.type = mData.type;
-      opt.index = mData.index;
-      delete opt.Class;
+    const q = _.clone(opt);
+    if (q.Class) {
+      mData = entityMetas[_.isString(q.Class) ? "findByName" : "findByClass"](q.Class);
+      q.type = mData.type;
+      q.index = mData.index;
+      delete q.Class;
     } else {
-      mData = entityMetas.findByIndexAndType(opt.index, opt.type);
+      mData = entityMetas.findByIndexAndType(q.index, q.type);
     }
 
-    let cacheKeyIsREq = "findById_isRequested_" + JSON.stringify(opt);
-    let isRequested = simpleCacher.get(cacheKeyIsREq);
-    let time = mData.findByIdCacheTime;
+    const cacheKeyIsREq = "findById_isRequested_" + JSON.stringify(q);
+    const isRequested = simpleCacher.get(cacheKeyIsREq);
+    const time = mData.findByIdCacheTime;
     if (isRequested === undefined) {
-      let res = client.get(opt).then(manager.transformGetResult);
+      let res;
+      if (_.isArray(q.id)) {
+        q.body = {
+          ids: q.id
+        };
+        delete q.id;
+        res = client.mget(q).then(manager.transformGetResult);
+      } else {
+        res = client.get(q).then(manager.transformGetResult);
+      }
 
       simpleCacher.set(cacheKeyIsREq, res, time);
       return res;
@@ -177,12 +196,15 @@ var manager = {
     return client.search(opt).then(manager.transformSearchResult);
   },
   create:                function (mappedObject, force = true) {
+    if (_.isArray(mappedObject)) {
+      return Promise.all(_.map(mappedObject, (v) => manager.create(v, force)));
+    }
     if (!force && !cacheKeys.get(mappedObject)) {
       throw new Error("You try to create not mapped object");
     }
     let metadata = entityMetas.findByClass(mappedObject.constructor);
     if (!metadata) {
-      throw new TypeError('Target type not found');
+      throw new TypeError("Target type not found");
     }
     mappedObject.id = shortid.generate();
     let body = {};
@@ -200,7 +222,11 @@ var manager = {
         if (!relatedObject.id) {
           cascadeCreatePromises.push(manager.create(relatedObject));//todo: check cascade persist joinMetadata...
         }
-        body[joinMetadata.fieldName] = relatedObject.id;
+        if (_.isArray(relatedObject)) {
+          body[joinMetadata.fieldName] = _.map(relatedObject, (v) => v.id);
+        } else {
+          body[joinMetadata.fieldName] = relatedObject.id;
+        }
       });
       result = Promise.all(cascadeCreatePromises);
     }
@@ -264,7 +290,7 @@ var manager = {
 export function entity(name, index, type, stalledTime) {
   return function (target) {
     index = index || manager.indexName + name;
-    entityMetas.add(new MetaData(name, target, {}, index, type, stalledTime));
+    entityMetas.add(new MetaData(name, target, {id: {type: FIELD_TYPES.STRING, index: "not_analyzed"}}, index, type, stalledTime));
     return target;
   };
 }
@@ -277,8 +303,8 @@ export function field(name, type) {
     }
     //_.set(md.mappings, name, type);
     name = _.isArray(name) ? name : name.split(".");
-    let mp = md.mappings,
-      len = name.length;
+    let mp  = md.mappings,
+        len = name.length;
     _.each(name, function (v, i) {
       if (!mp[v]) {
         mp[v] = {
@@ -295,30 +321,6 @@ export function field(name, type) {
     return target;
   };
 }
-/**
- * @url https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-types.html
- */
-const FIELD_TYPES = {
-  STRING:      "string",
-  LONG:        "long",
-  INTEGER:     "integer",
-  SHORT:       "short",
-  BYTE:        "byte",
-  DOUBLE:      "double",
-  FLOAT:       "float",
-  DATE:        "date",
-  BOOLEAN:     "boolean",
-  BINARY:      "binary",
-  OBJECT:      "object",
-  NESTED:      "nested",
-  GEO_POINT:   "geo_point",
-  GEO_SHAPE:   "geo_shape",
-  IP:          "ip",
-  COMPLETION:  "completion",
-  TOKEN_COUNT: "token_count",
-  MURMUR3:     "murmur3",
-};
-field.TYPE = FIELD_TYPES;
 
 /**
  * @param {String} name
@@ -340,7 +342,7 @@ export function join(name, cls, fieldName, type) {
     fieldName = name + "Id";
   }
   return function (target) {
-    let targetMetadata = entityMetas.findByClass(target);
+    const targetMetadata = entityMetas.findByClass(target);
     targetMetadata.joins.push(new JoinMetadata(name, cls, fieldName));
     Object.defineProperty(target.prototype, name, {
       configurable: true,
@@ -348,12 +350,12 @@ export function join(name, cls, fieldName, type) {
       get:          function () {
         let relatedValues = relations.get(this);
         if (relatedValues && name in relatedValues) {
-          return Promise.resolve(this.dataValues[name]);
+          return Promise.resolve(relatedValues[name]);
         }
-        if (relatedValues && fieldName in relatedValues) {
+        if (relatedValues && relatedValues.has(fieldName)) {
           return manager.findById({
             Class: cls,
-            id:    relatedValues[fieldName],
+            id:    relatedValues.get(fieldName),
           }).then(function (transformedData) {
             return this[name] = transformedData;
           }.bind(this));
@@ -366,8 +368,13 @@ export function join(name, cls, fieldName, type) {
           relatedValues = new Map();
           relations.set(this, relatedValues);
         }
-        if (!(val instanceof cls)) {
-          throw new TypeError("Wrong type of value for " + name + " field in " + targetMetadata.name);
+        if (val !== null && !(val instanceof cls)) {//todo: nullable validation?
+          if (!_.isArray(val) || _.some(val,
+              (item) => {
+                return !(item instanceof cls);
+              })) {
+            throw new TypeError("Wrong type of value for " + name + " field in " + targetMetadata.name);
+          }
         }
         relatedValues[name] = val;
         return this;
