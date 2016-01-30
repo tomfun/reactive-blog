@@ -5,6 +5,7 @@ import MetaData from "./elastic/Metadata";
 import MetadataCollection from "./elastic/MetadataCollection";
 import JoinMetadata from "./elastic/JoinMetadata";
 import client from "./elastic/client";
+import simpleCacher from "./elastic/simpleCacher";
 
 client.ping().then(function () {
   console.log('ping sucess')
@@ -13,50 +14,74 @@ client.ping().then(function () {
 //_.memoize.Cache = WeakMap; ?!
 
 let entityMetas = new MetadataCollection();
-console.log("\n\n\n#############\n", entityMetas.__proto__.__proto__)
-process.exit(1)
 let rawSources = new WeakMap();
+let cacheKeys = new WeakMap();
+let relations = new WeakMap();
+
+//function tripleBad(obj, oldObj, newObj) {
+//  for(let key in obj) {
+//    if (obj.hasOwnProperty(key)) {
+//      if (_.isObject(obj[key])) {//?
+//        if (_.isObject(oldObj[key]) && _.isObject(newObj[key])) {
+//          tripleBad(obj[key], oldObj[key], newObj[key]);
+//        } else if () {
+//
+//        }
+//      }
+//    }
+//  }
+//}
 
 var manager = {
   indexName:             "reactive_blog_", //todo
-  transformSingleResult: function (data, includeInfo) {
+  transformSingleResult: function (data, refreshEntity) {
+    let cacheKey = 'transformSingleResult_' + data._index + '/_/' + data._type + data._id;
+    let resultObject = simpleCacher.get(cacheKey);
+    if (resultObject && !refreshEntity) {
+      let oldSource = rawSources.get(cacheKey);
+      //todo: merge unchanged tripleBad
+      rawSources.set(resultObject, data);
+      return resultObject;
+    }
     let md = entityMetas.findByIndexAndType(data._index, data._type);
     if (!md) {
-      return includeInfo ? data : data._source;
+      return data._source;
     }
-    let resultObject = new md.Class();
+    if (!refreshEntity) {
+      resultObject = new md.Class();
+    }
     let relationFields = _.map(md.joins, "fieldName");
     _.extend(resultObject, _.omit(data._source, relationFields));
+    let relatedValues = new Map();
     _.each(relationFields, function (fieldName) {
-      if (!('dataValues' in resultObject)) {
-        try {
-          resultObject[md.joins[0].name] = undefined;
-        } catch (e) {
-          //all is ok
-          //initialize dataValues field
-        }
-      }
       if (data._source[fieldName] !== undefined) {
-        resultObject.dataValues[fieldName] = data._source[fieldName];
+        relatedValues[fieldName] = data._source[fieldName];
       }
     });
-    if (includeInfo) {
-      resultObject._info = _.omit(data, ['_source', '_index', '_type']);
+    if (relatedValues.size) {
+      relations.set(resultObject, relatedValues);
     }
+
+    if (!refreshEntity) {
+      simpleCacher.set(cacheKey, resultObject, md.stalledTime);
+    }
+    rawSources.set(resultObject, data);
+    cacheKeys.set(resultObject, cacheKey);
+
     return resultObject;
   },
-  transformResult:       function (data, includeInfo) {
+  transformResult:       function (data) {
     return _.isArray(data)
       ? _.map(data, function (item) {
-      return manager.transformSingleResult(item, includeInfo);
+      return manager.transformSingleResult(item);
     })
-      : manager.transformSingleResult(data, includeInfo);
+      : manager.transformSingleResult(data);
   },
-  transformGetResult:    function (data, includeInfo) {
-    return manager.transformResult(data, includeInfo);
+  transformGetResult:    function (data) {
+    return manager.transformResult(data);
   },
-  transformSearchResult: function (data, includeInfo) {
-    return manager.transformResult(data.hits.hits, includeInfo);
+  transformSearchResult: function (data) {
+    return manager.transformResult(data.hits.hits);
   },
   /**
    * @param {Class|String} [opt.Class] override opt.type and opt.index
@@ -66,13 +91,26 @@ var manager = {
    * @return {Promise<Object|null>}
    */
   findById:              function (opt) {
+    let mData;
     if (opt.Class) {
-      let mData = entityMetas[_.isString(opt.type) ? 'findByName' : 'findByClass'](opt.Class);
+      mData = entityMetas[_.isString(opt.Class) ? 'findByName' : 'findByClass'](opt.Class);
       opt.type = mData.type;
       opt.index = mData.index;
       delete opt.Class;
+    } else {
+      mData = entityMetas.findByIndexAndType(opt.index, opt.type);
     }
-    return client.get(opt).then(manager.transformGetResult);
+
+    let cacheKeyIsREq = "findById_isRequested_" + JSON.stringify(opt);
+    let isRequested = simpleCacher.get(cacheKeyIsREq);
+    let time = mData.findByIdCacheTime;
+    if (isRequested === undefined) {
+      let res = client.get(opt).then(manager.transformGetResult);
+
+      simpleCacher.set(cacheKeyIsREq, res, time);
+      return res;
+    }
+    return isRequested;
   },
   /**
    * @param {Class|String} [opt.Class] override opt.type and opt.index
@@ -138,8 +176,10 @@ var manager = {
     }
     return client.search(opt).then(manager.transformSearchResult);
   },
-  create:                function (mappedObject) {
-    //todo: check Object is mapped
+  create:                function (mappedObject, force = true) {
+    if (!force && !cacheKeys.get(mappedObject)) {
+      throw new Error("You try to create not mapped object");
+    }
     let metadata = entityMetas.findByClass(mappedObject.constructor);
     if (!metadata) {
       throw new TypeError('Target type not found');
@@ -148,19 +188,20 @@ var manager = {
     let body = {};
     let excludeFields = [];
     let result = Promise.resolve();
-    if ('dataValues' in mappedObject && metadata.joins.length) {
+    if (relations.has(mappedObject) && metadata.joins.length) {
       let cascadeCreatePromises = [];
+      let relatedValues = relations.get(mappedObject);
       _.each(metadata.joins, function (joinMetadata) {
-        let relatedObject = this.dataValues[joinMetadata.name];
+        let relatedObject = relatedValues[joinMetadata.name];
         if (!relatedObject || !joinMetadata.fieldName) {
           return;
         }
         excludeFields.push(joinMetadata.fieldName);
         if (!relatedObject.id) {
-          cascadeCreatePromises.push(manager.create(relatedObject));
+          cascadeCreatePromises.push(manager.create(relatedObject));//todo: check cascade persist joinMetadata...
         }
         body[joinMetadata.fieldName] = relatedObject.id;
-      }, mappedObject);
+      });
       result = Promise.all(cascadeCreatePromises);
     }
     result.then(function () {
@@ -177,25 +218,40 @@ var manager = {
   remove(mappedObject) {
     let metadata = entityMetas.findByClass(mappedObject.constructor);
     if (!metadata) {
-      throw new TypeError('Type not found');
+      throw new TypeError("Type not found");
     }
     return metadata.remove(client, mappedObject.id);
-    //todo: cascade delete
+    //todo: cascade delete, update
   },
   detach(mappedObject) {
-
+    let cacheKey = cacheKeys.get(mappedObject);
+    if (cacheKey) {
+      rawSources.delete(mappedObject);
+      cacheKeys.delete(mappedObject);
+      simpleCacher.delete(cacheKey);
+    }
   },
-  refresh(mappedObject) {
-
+  refresh(mappedObject, stalledTime) {
+    let source = rawSources.get(mappedObject);
+    let cacheKey = cacheKeys.get(mappedObject);
+    if (!source) {
+      throw new Error("Nothing to refresh");
+    }
+    stalledTime = stalledTime || entityMetas.findByClass(mappedObject.constructor).stalledTime;
+    simpleCacher.set(cacheKey, mappedObject, stalledTime);
+    return client.get({
+      index: source._index,
+      type:  source._type,
+      id:    source._id,
+    }).then(function (data) {
+      manager.transformSingleResult(data, true);
+    });
   },
   update(mappedObject, noRecursive) {
 
   },
   createTypes() {
-    return Promise.all(_.map(entityMetas, function (md) {
-      /**
-       * @type {MetaData}
-       */
+    return Promise.all(entityMetas.map(function (md) {
       return md.existType(client).then(function (d) {
         return d ? md.putType(client) : md.createType(client);
       }).catch(function (e) {
@@ -205,10 +261,10 @@ var manager = {
   }
 };
 
-export function entity(name, index, type) {
+export function entity(name, index, type, stalledTime) {
   return function (target) {
     index = index || manager.indexName + name;
-    entityMetas.add(new MetaData(name, target, {}, index, type));
+    entityMetas.add(new MetaData(name, target, {}, index, type, stalledTime));
     return target;
   };
 }
@@ -221,8 +277,8 @@ export function field(name, type) {
     }
     //_.set(md.mappings, name, type);
     name = _.isArray(name) ? name : name.split(".");
-    let mp  = md.mappings,
-        len = name.length;
+    let mp = md.mappings,
+      len = name.length;
     _.each(name, function (v, i) {
       if (!mp[v]) {
         mp[v] = {
@@ -270,7 +326,16 @@ field.TYPE = FIELD_TYPES;
  * @param {String|Boolean} [fieldName=name + 'Id']
  * @returns {Function}
  */
-export function join(name, cls, fieldName) {
+export function join(name, cls, fieldName, type) {
+  /*
+   inverse many - массив айдишников хранится в другом объекте (включая наш айдишник)
+   owning many - массив айдишников хранится в объекте (включая наш айдишник)
+   omni-directional - массива нет, есть отдельный индекс и/или тип
+   i 1:m - id в другом объекте
+   o m:1 - id в объекте
+   i 1:1 - id в другом объекте
+   o 1:1 - id в объекте
+   */
   if (fieldName === undefined) {
     fieldName = name + "Id";
   }
@@ -281,31 +346,30 @@ export function join(name, cls, fieldName) {
       configurable: true,
       enumerable:   true,
       get:          function () {
-        if ("dataValues" in this && name in this.dataValues) {
+        let relatedValues = relations.get(this);
+        if (relatedValues && name in relatedValues) {
           return Promise.resolve(this.dataValues[name]);
         }
-        if ("dataValues" in this && fieldName in this.dataValues) {
+        if (relatedValues && fieldName in relatedValues) {
           return manager.findById({
             Class: cls,
-            id:    this.dataValues[fieldName],
+            id:    relatedValues[fieldName],
           }).then(function (transformedData) {
             return this[name] = transformedData;
           }.bind(this));
         }
+        return Promise.resolve(null);
       },
       set:          function (val) {
-        if (!("dataValues" in this)) {
-          Object.defineProperty(this, "dataValues", {
-            configurable: false,
-            enumerable:   false,
-            writable:     false,
-            value:        {}
-          });
+        let relatedValues = relations.get(this);
+        if (!relatedValues) {
+          relatedValues = new Map();
+          relations.set(this, relatedValues);
         }
         if (!(val instanceof cls)) {
           throw new TypeError("Wrong type of value for " + name + " field in " + targetMetadata.name);
         }
-        this.dataValues[name] = val;
+        relatedValues[name] = val;
         return this;
       }
     });

@@ -19,6 +19,7 @@ manager.createTypes();
 
 
 setTimeout(function () {
+  console.log("\n\n")
   //console.log(Post);
   //var p = new Post();
   //p.title = "новый пост";
@@ -32,20 +33,31 @@ setTimeout(function () {
   //console.log("\n\n\n")
   //manager.create(p);
 
-  //manager.findOne({Class: Post, id: 'e1h_y9nde'}).then(function (data) {
+  //manager.findOne({Class: Post, id: 'ek1gneaox'}).then(function (data) {
   //  console.log(data)
   //});
+  //var _ = require('lodash');
+  //var time0 = new Date();
+  //let loadTest = _.range(1, 2).map(function (i) {
+  //  return manager.findById({Class: Post, id: 'Ek1GnEAOx'}).then(function (post) {
+  //    if (i%1000 === 0)
+  //    console.log('%%%%%%%', post)
+  //    return post.author.then(function (author) {
+  //      if (i%1000 === 0)
+  //      console.log(author)
+  //    })
+  //  }).catch(function (some) {
+  //    console.error(some, some.stack)
+  //  });
+  //});
+  //Promise.all(loadTest).then(function () {
+  //  var length = (new Date()) - (+time0);
+  //  console.log('\n Took: ', length, '(ms)');
+  //})
 
-  manager.findById({Class: Post, id: 'E1H_Y9nde'}).then(function (post) {
-    console.log('%%%%%%%', post)
-    return post.author.then(function (author) {
-      console.log(author)
-    })
+  manager.findOne({Class: Post}).then(function (data) {
+    console.log(data)
   }).catch(function (some) {
-    console.error(some, some.stack)
+    console.error(some, some ? some.stack : '');
   });
-
-  //manager.findOne({Class: Post}).then(function (data) {
-  //  console.log(data)
-  //});
 }, 1000)
