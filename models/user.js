@@ -40,7 +40,7 @@ setTimeout(function () {
   //});
   var _ = require('lodash');
   var time0 = new Date();
-  let loadTest = _.range(1, 2).map(function (i) {
+  let loadTest = _.range(1, 10).map(function (i) {
     return manager.findById({Class: Post, id: 'Vk35dyUFg'}).then(function (post) {
       //if (i%1000 === 0)
       console.log('%%%%%%%', post)

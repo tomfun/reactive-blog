@@ -6,7 +6,7 @@ export default class MetaData {
     this.type = type || name;
     this.mappings = mappings || {};
     this.stalledTime = stalledTime === undefined ? 300000 : stalledTime;
-    this.findByIdCacheTime = findByIdCacheTime === undefined ? 100 : findByIdCacheTime;
+    this.findByIdCacheTime = findByIdCacheTime === undefined ? 0.1 : findByIdCacheTime;
     this.joins = [];
   }
 

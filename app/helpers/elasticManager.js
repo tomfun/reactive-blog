@@ -46,10 +46,11 @@ const relations = new WeakMap();
 var manager = {
   indexName:             "reactive_blog_", //todo
   transformSingleResult: function (data, refreshEntity) {
-    let cacheKey = 'transformSingleResult_' + data._index + '/_/' + data._type + data._id;
+    const cacheKey = 'transformSingleResult_' + data._index + '/_/' + data._type + data._id;
     let resultObject = simpleCacher.get(cacheKey);
     if (resultObject && !refreshEntity) {
-      let oldSource = rawSources.get(cacheKey);
+      const oldSource = rawSources.get(cacheKey);
+      console.log(typeof resultObject,typeof oldSource,typeof data)
       tripleBad(resultObject, oldSource, data, entityMetas);
       rawSources.set(resultObject, data);
       return resultObject;
