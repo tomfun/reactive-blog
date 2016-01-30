@@ -3,8 +3,9 @@
 ## Requirements
 
 * Tested on node 5+
-* Bower
+* npm install -g bower
 * Elasticsearch 2+
+* npm install -g webpack
 
 ## Install
 

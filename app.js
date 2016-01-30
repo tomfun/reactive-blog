@@ -3,6 +3,7 @@ import path from 'path';
 import initialize from './controllers/initialize';
 import log4js from 'log4js';
 
+require('./models/user');//TEST
 
 let app = express();
 

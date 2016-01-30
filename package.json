@@ -3,8 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "./node_modules/.bin/nodemon  -e js,twig --ignore test/ --exec \"./node_modules/.bin/babel-node bin/www\"",
-    "build": "./node_modules/.bin/l10ns compile && ./node_modules/.bin/webpack --colors --progress"
+    "start": "./node_modules/.bin/nodemon  -e js,twig --ignore test/ --exec \"./node_modules/.bin/babel-node bin/www\""
+    "build": "./node_modules/.bin/l10ns compile && ./node_modules/.bin/webpack --colors --progress",
+    "test": "env NODE_ENV=test ./node_modules/.bin/mocha -r should --compilers js:babel-core/register"
   },
   "contributors": [
     "Vladimir Odesskij <odesskij1992@gmail.com>",
@@ -45,7 +46,7 @@
     "gulp-watch": "^4.3.5",
     "history": "^1.17.0",
     "l10ns": "^2.2.5",
-    "lodash": "^3.10.1",
+    "lodash": "^4.1.0",
     "log4js": "^0.6.29",
     "main-bower-files": "^2.11.1",
     "marked": "^0.3.5",
@@ -56,12 +57,15 @@
     "react-router": "^1.0.3",
     "react-tap-event-plugin": "^0.2.1",
     "serve-favicon": "~2.3.0",
+    "shortid": "^2.2.4",
     "twig": "^0.8.6",
     "twig-compile": "^0.1.2",
     "webpack": "^1.12.10",
     "webpack-dev-server": "^1.14.0"
   },
   "devDependencies": {
+    "mocha": "^2.4.5",
+    "should": "^8.2.1",
     "babel-cli": "^6.4.0",
     "babel-core": "^6.4.0",
     "babel-eslint": "^4.1.6",
