@@ -12,7 +12,7 @@ function clear() {
     if (value.ttl <= now) {
       clearKeys.add(key);
     } else {
-      minTime = Math.min(minTime, ttl - now)
+      minTime = Math.min(minTime, value.ttl - now)
     }
   }
   for (let item of clearKeys) {
@@ -56,10 +56,8 @@ export default {
       }
       cache.delete(key);
     }
+  },
+  delete: function (key) {
+    cache.delete(key);
   }
 };
-
-
-setInterval(function () {
-  console.log('\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ size:  ' + cache.size)
-}, 50);

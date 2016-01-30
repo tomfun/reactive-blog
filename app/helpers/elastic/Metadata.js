@@ -1,10 +1,12 @@
 export default class MetaData {
-  constructor(name, cls, mappings, index, type) {
+  constructor(name, cls, mappings, index, type, stalledTime, findByIdCacheTime) {
     this.name = name;
     this.Class = cls;
     this.index = index;
     this.type = type || name;
     this.mappings = mappings || {};
+    this.stalledTime = stalledTime === undefined ? 300000 : stalledTime;
+    this.findByIdCacheTime = findByIdCacheTime === undefined ? 100 : findByIdCacheTime;
     this.joins = [];
   }
 
