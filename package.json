@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "./node_modules/.bin/nodemon  -e js,twig --ignore test/ --exec \"./node_modules/.bin/babel-node bin/www\""
+    "start": "./node_modules/.bin/nodemon  -e js,twig --ignore test/ --exec \"./node_modules/.bin/babel-node bin/www\"",
+    "test": "env NODE_ENV=test ./node_modules/.bin/mocha -r should --compilers js:babel-core/register"
   },
   "author": [
     "Vladimir Odesskij",
@@ -58,6 +59,8 @@
     "webpack-dev-server": "^1.14.0"
   },
   "devDependencies": {
+    "mocha": "^2.4.5",
+    "should": "^8.2.1",
     "babel-cli": "^6.4.0",
     "babel-core": "^6.4.0",
     "babel-eslint": "^4.1.6",
