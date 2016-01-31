@@ -36,7 +36,20 @@ const FIELD_TYPES = {
   MURMUR3:     "murmur3",
   //todo: VIRTUAL
 };
-field.TYPE = FIELD_TYPES;
+
+const JOIN_TYPES = {
+  ONE_TO_MANY:                 "i 1:m",
+  MANY_TO_ONE:                 "o m:1",
+  ONE_TO_ONE_OWNING:           "o 1:1",
+  ONE_TO_ONE_INVERSE:          "i 1:1",
+  MANY_TO_MANY_UNIDIRECTIONAL: "u m:m",
+  MANY_TO_MANY_OWNING:         "o m:m",
+  MANY_TO_MANY_INVERSE:        "i m:m",
+  ONE_TO_MANY_NESTED:          "n 1:m",
+  ONE_TO_ONE_NESTED:           "n 1:1",
+  ONE_TO_ANY_NESTED:           "n 1:x",
+  ONE_TO_ANY_OWNING:           "o 1:x",
+};
 
 const entityMetas = new MetadataCollection();
 const rawSources = new WeakMap();
@@ -330,14 +343,26 @@ export function field(name, type, index) {
     return target;
   };
 }
+field.TYPE = FIELD_TYPES;
 
 /**
  * @param {String} name
  * @param {Class|String} cls
  * @param {String|Boolean} [fieldName=name + 'Id']
+ * @param {String} [type=JOIN_TYPES.ONE_TO_ANY_OWNING]
+ * @param {Object} [options={}]
+ * @param {Boolean} [options.nullable=true]
+ * @param {Object} [options.cascade]
+ * @param {String} [options.cascade.remove] One of SET_NULL, CASCADE, RESTRICT
+ * @param {Boolean} [options.cascade.update=true]
+ * @param {Boolean} [options.cascade.merge=true] TODO
+ * @param {Boolean} [options.cascade.detach]
+ * @param {Boolean} [options.cascade.refresh]
+ * @param {Boolean} [options.cascade.create]
+ * @param {Boolean} [options.orphanRemoval]
  * @returns {Function}
  */
-export function join(name, cls, fieldName, type) {
+export function join(name, cls, fieldName, type, options) {
   /*
    inverse many - массив айдишников хранится в другом объекте (включая наш айдишник)
    owning many - массив айдишников хранится в объекте (включая наш айдишник)
@@ -347,12 +372,15 @@ export function join(name, cls, fieldName, type) {
    i 1:1 - id в другом объекте
    o 1:1 - id в объекте
    */
+  if (!type) {
+    type = JOIN_TYPES.ONE_TO_ANY_OWNING;
+  }
   if (fieldName === undefined) {
     fieldName = name + "Id";
   }
   return function (target) {
     const targetMetadata = entityMetas.findByClass(target);
-    targetMetadata.joins.push(new JoinMetadata(name, cls, fieldName));
+    targetMetadata.joins.push(new JoinMetadata(name, cls, fieldName, type, options));
     Object.defineProperty(target.prototype, name, {
       configurable: true,
       enumerable:   true,
@@ -392,19 +420,6 @@ export function join(name, cls, fieldName, type) {
     return target;
   };
 }
-const JOIN_TYPES = {
-  ONE_TO_MANY:                 "i 1:m",
-  MANY_TO_ONE:                 "o m:1",
-  ONE_TO_ONE_OWNING:           "o 1:1",
-  ONE_TO_ONE_INVERSE:          "i 1:1",
-  MANY_TO_MANY_UNIDIRECTIONAL: "u m:m",
-  MANY_TO_MANY_OWNING:         "o m:m",
-  MANY_TO_MANY_INVERSE:        "i m:m",
-  ONE_TO_MANY_NESTED:          "n 1:m",
-  ONE_TO_ONE_NESTED:           "n 1:1",
-  ONE_TO_ANY_NESTED:           "n 1:x",
-  ONE_TO_ANY_OWNING:           "o 1:x",
-};
 join.TYPE = JOIN_TYPES;
 
 export default manager;
