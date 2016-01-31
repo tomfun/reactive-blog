@@ -50,7 +50,7 @@ var manager = {
     let resultObject = simpleCacher.get(cacheKey);
     if (resultObject && !refreshEntity) {
       const oldSource = rawSources.get(cacheKey);
-      console.log(typeof resultObject,typeof oldSource,typeof data)
+      console.log(typeof resultObject, typeof oldSource, typeof data)
       tripleBad(resultObject, oldSource, data, entityMetas);
       rawSources.set(resultObject, data);
       return resultObject;
@@ -291,12 +291,17 @@ var manager = {
 export function entity(name, index, type, stalledTime) {
   return function (target) {
     index = index || manager.indexName + name;
-    entityMetas.add(new MetaData(name, target, {id: {type: FIELD_TYPES.STRING, index: "not_analyzed"}}, index, type, stalledTime));
+    entityMetas.add(new MetaData(name, target, {
+      id: {
+        type:  FIELD_TYPES.STRING,
+        index: "not_analyzed"
+      }
+    }, index, type, stalledTime));
     return target;
   };
 }
 
-export function field(name, type) {
+export function field(name, type, index) {
   return function (target) {
     let md;
     if (!(md = entityMetas.findByClass(target))) {
@@ -314,6 +319,9 @@ export function field(name, type) {
       }
       if (i + 1 === len) {
         mp[v].type = type;
+        if (index) {
+          mp[v].index = index;
+        }
       } else {
         mp = !mp[v].properties ? mp[v].properties = {} : mp[v].properties;
       }
@@ -384,6 +392,19 @@ export function join(name, cls, fieldName, type) {
     return target;
   };
 }
-
+const JOIN_TYPES = {
+  ONE_TO_MANY:                 "i 1:m",
+  MANY_TO_ONE:                 "o m:1",
+  ONE_TO_ONE_OWNING:           "o 1:1",
+  ONE_TO_ONE_INVERSE:          "i 1:1",
+  MANY_TO_MANY_UNIDIRECTIONAL: "u m:m",
+  MANY_TO_MANY_OWNING:         "o m:m",
+  MANY_TO_MANY_INVERSE:        "i m:m",
+  ONE_TO_MANY_NESTED:          "n 1:m",
+  ONE_TO_ONE_NESTED:           "n 1:1",
+  ONE_TO_ANY_NESTED:           "n 1:x",
+  ONE_TO_ANY_OWNING:           "o 1:x",
+};
+join.TYPE = JOIN_TYPES;
 
 export default manager;
