@@ -290,6 +290,10 @@ var manager = {
   update(mappedObject, noRecursive) {
 
   },
+  size() {
+    return simpleCacher.size();
+  },
+  //getEntityState
   createTypes() {
     return Promise.all(entityMetas.map(function (md) {
       return md.existType(client).then(function (d) {
@@ -354,12 +358,18 @@ field.TYPE = FIELD_TYPES;
  * @param {Boolean} [options.nullable=true]
  * @param {Object} [options.cascade]
  * @param {String} [options.cascade.remove] One of SET_NULL, CASCADE, RESTRICT
+ * If X is removed and persist operations are configured to cascade on the relationship,
+ * an exception will be thrown as this indicates a programming error (X would be re-persisted by the cascade).
+ * If X is detached and persist operations are configured to cascade on the relationship,
+ * an exception will be thrown (This is semantically the same as passing X to persist()).
+ * No cascade options are relevant for removed entities on flush, the cascade remove option is already executed during
  * @param {Boolean} [options.cascade.update=true]
  * @param {Boolean} [options.cascade.merge=true] TODO
  * @param {Boolean} [options.cascade.detach]
  * @param {Boolean} [options.cascade.refresh]
- * @param {Boolean} [options.cascade.create]
+ * @param {Boolean} [options.cascade.create] if false -> may be error
  * @param {Boolean} [options.orphanRemoval]
+ * //todo: EAGER collection loading
  * @returns {Function}
  */
 export function join(name, cls, fieldName, type, options) {

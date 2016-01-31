@@ -59,5 +59,9 @@ export default {
   },
   delete: function (key) {
     cache.delete(key);
+  },
+  size() {
+    clear();
+    return cache.size;
   }
 };
