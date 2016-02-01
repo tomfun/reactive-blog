@@ -5,6 +5,7 @@
   "scripts": {
     "start": "./node_modules/.bin/nodemon  -e js,twig --ignore test/ --exec \"./node_modules/.bin/babel-node bin/www\"",
     "build": "./node_modules/.bin/l10ns compile && ./node_modules/.bin/webpack --colors --progress",
+    "babel": "./node_modules/.bin/babel app bin controllers models -o build.js",
     "test": "env NODE_ENV=test ./node_modules/.bin/mocha -r should --compilers js:babel-core/register"
   },
   "contributors": [
