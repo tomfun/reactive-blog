@@ -28,6 +28,13 @@ export default class MetadataCollection  {
     });
   }
   /**
+   * @param {Object} object
+   * @returns {MetaData}
+   */
+  findByObject(object) {
+    return this.findByClass(object.constructor);
+  }
+  /**
    * @param {Class|Function} Class
    * @returns {MetaData}
    */

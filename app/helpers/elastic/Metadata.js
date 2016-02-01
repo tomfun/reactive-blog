@@ -1,3 +1,5 @@
+import shortid from "shortid";
+
 export default class MetaData {
   constructor(name, cls, mappings, index, type, stalledTime, findByIdCacheTime) {
     this.name = name;
@@ -21,8 +23,8 @@ export default class MetaData {
   createType(client) {
     let args = {
       index: this.index,
-      type: this.type,
-      body: {
+      type:  this.type,
+      body:  {
         mappings: this.getMappings()
       }
     };
@@ -32,8 +34,8 @@ export default class MetaData {
   putType(client) {
     let args = {
       index: this.index,
-      type: this.type,
-      body: this.getMappings()
+      type:  this.type,
+      body:  this.getMappings()
     };
     return client.indices.putMapping(args);
   }
@@ -41,24 +43,28 @@ export default class MetaData {
   existType(client) {
     return client.indices.exists({
       index: this.index,
-      type: this.type,
+      type:  this.type,
     });
   }
 
   create(client, json) {
     return client.create({
       index: this.index,
-      type: this.type,
-      id: json.id,
-      body: json
+      type:  this.type,
+      id:    json.id,
+      body:  json
     });
   }
 
   remove(client, json) {
     return client.delete({
       index: this.index,
-      type: this.type,
-      id: json.id,
+      type:  this.type,
+      id:    json.id,
     });
+  }
+
+  generateId(object) {
+    return shortid.generate();
   }
 }
