@@ -1,4 +1,5 @@
-import _ from "lodash";
+const _ = require("lodash");
+
 import MetaData from "./Metadata";
 
 export default class MetadataCollection  {

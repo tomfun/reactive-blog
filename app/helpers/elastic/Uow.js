@@ -1,4 +1,5 @@
-import _ from "lodash";
+const _ = require("lodash");
+
 import tripleBad from "./tripleBad";
 
 class Uow {
@@ -12,24 +13,33 @@ class Uow {
     this.relations = new WeakMap();
   }
 
-  transformSingleResult(data, refreshEntity) {
+  /**
+   * Transform json data from elastci to instance of entity or return source
+   * @param {Object} data
+   * @param {String} data._index
+   * @param {String} data._type
+   * @param {String} data._id
+   * @param {Object} data._source
+   * @param {Boolean} [refreshEntity=false]
+   * @returns {*}
+   */
+  transformSingleResult(data, refreshEntity = false) {
     const cacheKey = "transformSingleResult_" + data._index + "/_/" + data._type + data._id;
-    let resultObject = simpleCacher.get(cacheKey);
+    let resultObject = this.em.simpleCacher.get(cacheKey);
     if (resultObject && !refreshEntity) {
       const oldSource = this.rawSources.get(cacheKey);
-      console.log(typeof resultObject, typeof oldSource, typeof data)
-      tripleBad(resultObject, oldSource, data, entityMetas);
+      tripleBad(resultObject, oldSource, data, this.em.entityMetas);
       this.rawSources.set(resultObject, data);
       return resultObject;
     }
-    const md = this.em.entityMetas.findByIndexAndType(data._index, data._type);
-    if (!md) {
+    const mData = this.em.entityMetas.findByIndexAndType(data._index, data._type);
+    if (!mData) {
       return data._source;
     }
     if (!refreshEntity) {
-      resultObject = new md.Class();
+      resultObject = new mData.Class();
     }
-    const relationFields = _.map(md.joins, "fieldName");
+    const relationFields = _.map(mData.joins, "fieldName");
     _.extend(resultObject, _.omit(data._source, relationFields));
     const relatedValues = new Map();
     _.each(relationFields, function (fieldName) {
@@ -42,7 +52,7 @@ class Uow {
     }
 
     if (!refreshEntity) {
-      simpleCacher.set(cacheKey, resultObject, md.stalledTime);
+      this.em.simpleCacher.set(cacheKey, resultObject, mData.stalledTime);
     }
     this.em.rawSources.set(resultObject, data);
     this.em.cacheKeys.set(resultObject, cacheKey);
@@ -166,14 +176,14 @@ class Uow {
   }
 
   refresh(mappedObject, stalledTime) {
-    let source = this.rawSources.get(mappedObject);
-    let cacheKey = this.cacheKeys.get(mappedObject);
+    const source = this.rawSources.get(mappedObject);
+    const cacheKey = this.cacheKeys.get(mappedObject);
     if (!source) {
       throw new Error("Nothing to refresh");
     }
     stalledTime = stalledTime || this.entityMetas.findByClass(mappedObject.constructor).stalledTime;
-    simpleCacher.set(cacheKey, mappedObject, stalledTime);
-    return client.get({
+    this.em.simpleCacher.set(cacheKey, mappedObject, stalledTime);
+    return this.em.client.get({
       index: source._index,
       type:  source._type,
       id:    source._id,

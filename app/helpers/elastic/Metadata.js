@@ -1,4 +1,4 @@
-import shortid from "shortid";
+const shortid = require("shortid");
 
 export default class MetaData {
   constructor(name, cls, mappings, index, type, stalledTime, findByIdCacheTime) {
@@ -10,6 +10,8 @@ export default class MetaData {
     this.stalledTime = stalledTime === undefined ? 300000 : stalledTime;
     this.findByIdCacheTime = findByIdCacheTime === undefined ? 0.1 : findByIdCacheTime;
     this.joins = [];
+    this.idFieldName = "id";
+    this.idGenerator = shortid.generate;
   }
 
   getMappings() {
@@ -65,6 +67,6 @@ export default class MetaData {
   }
 
   generateId(object) {
-    return shortid.generate();
+    return this.idGenerator(object);
   }
 }

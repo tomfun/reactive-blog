@@ -1,14 +1,21 @@
-import _ from 'lodash';
+const _ = require("lodash");
 
-let cache = new Map();
+const cache = new Map();
 let timer = null;
 let minTime = 1;
 
+function scheduleClear() {
+  process.nextTick(function () {
+    if (timer) {return;}
+    timer = setTimeout(clear, minTime);
+  });
+}
+
 function clear() {
-  let clearKeys = new Set();
-  let now = Date.now();
+  const clearKeys = new Set();
+  const now = Date.now();
   minTime = 1000000000;
-  for (var [key, value] of cache) {
+  for (let [key, value] of cache) {
     if (value.ttl <= now) {
       clearKeys.add(key);
     } else {
@@ -21,12 +28,6 @@ function clear() {
   timer = null;
   scheduleClear();
 }
-function scheduleClear() {
-  process.nextTick(function () {
-    if (timer) {return;}
-    timer = setTimeout(clear, minTime);
-  });
-}
 
 export default {
   set: function (key, data, cacheTime) {
@@ -34,7 +35,7 @@ export default {
     if (!cacheTime || cacheTime < 0 || _.isNaN(cache) || !_.isFinite(cacheTime)) {
       throw new TypeError("cacheTime must be positive finite number");
     }
-    let ttl = Date.now() + cacheTime;
+    const ttl = Date.now() + cacheTime;
     cache.set(key, {
       data,
       ttl

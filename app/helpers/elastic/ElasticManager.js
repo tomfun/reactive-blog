@@ -1,4 +1,4 @@
-import _ from "lodash";
+const _ = require("lodash");
 
 import MetadataCollection from "./MetadataCollection";
 import simpleCacher from "./simpleCacher";

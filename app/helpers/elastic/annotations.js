@@ -1,4 +1,4 @@
-import _ from "lodash";
+const _ = require("lodash");
 import {FIELD_TYPES, JOIN_TYPES, CASCADE_REMOVE_TYPE} from "./consts";
 
 const collection = new Map();
@@ -79,7 +79,7 @@ join.CASCADE_REMOVE_TYPE = CASCADE_REMOVE_TYPE;
 export function importMetadata(filter) {
   let res = [];
   for (const [Class, aDataArray] of collection) {
-    _.each(aDataArray, function (aData) {
+    _.each(aDataArray, (aData) => {
       let data = _.cloneDeep(aData);
       data.Class = Class;
       res.push(data);

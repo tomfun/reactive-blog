@@ -1,6 +1,8 @@
-import _ from "lodash";
+const _ = require("lodash");
+
 import {FIELD_TYPES, JOIN_TYPES, CASCADE_REMOVE_TYPE} from "./consts";
 import Metadata from "./Metadata";
+import MetadataCollection from "./MetadataCollection";
 import JoinMetadata from "./JoinMetadata";
 
 /**
@@ -20,11 +22,9 @@ function validateJoinSet(type, cls, val, options) {
   function validateArrayType() {
     return _.some(val,
       (item) => {
-        console.log(cls)
         return !(item instanceof cls);//must be array of class
       });
   }
-  console.log('88888888', cls)
 
   let typeError = !options.nullable && val === null;// must not be null
   if (!typeError && val !== null) {
@@ -78,35 +78,88 @@ export default class ClassDecorator {
       const args = aData.args;
       this.field(args.name, args.type, args.index)(aData.Class);
     });
+    _.each(annotationData, (aData) => {
+      this.configureIdField()(aData.Class);
+    });
     _.each(_.filter(annotationData, {annotationName: "join"}), (aData) => {
       const args = aData.args;
       this.join(args.name, args.cls, args.fieldName, args.type, args.options)(aData.Class);
     });
   }
 
-  entity(name, index, type, stalledTime) {
+  entity(entityName, indexName, type, stalledTime = 300000, findByIdCacheTime = 100) {
     return (target) => {
-      //todo: validation same name, same index/type
-      index = index || this.em.configuration.indexName + name;
-      this.em.entityMetas.add(new Metadata(name, target, {
-        id: {
-          type:  FIELD_TYPES.STRING,
-          index: "not_analyzed"
+      const mData = this.em.entityMetas.findByClass(target);
+      const name = entityName || target.constructor.name;
+      if (!name && !mData) {
+        throw new Error("Name of entity id required");
+      }
+      const findByIndexAndType = MetadataCollection.findByIndexAndType.bind(this.em.entityMetas);
+      if (mData) {
+        const extend = {
+          name:              name || mData.name,
+          index:             indexName || mData.name,
+          type:              type || mData.type,
+          stalledTime:       stalledTime || mData.stalledTime,
+          findByIdCacheTime: findByIdCacheTime || mData.findByIdCacheTime
+        };
+        if (findByIndexAndType(extend.index, extend.type) !== mData) { //cache
+          throw new Error("Entity with same index and type exist");
         }
-      }, index, type, stalledTime));
+        if (this.em.entityMetas.findByName(extend.name) !== mData) {
+          throw new Error("Entity with same name exist");
+        }
+        _.extend(mData, extend);
+        return target;
+      }
+
+      const index = indexName || this.em.configuration.indexName + name;
+      if (findByIndexAndType(index, type)) { //cache
+        throw new Error("Entity with same index and type exist");
+      }
+      if (this.em.entityMetas.findByName(name)) {
+        throw new Error("Entity with same name exist");
+      }
+      this.em.entityMetas.add(new Metadata(name, target, {}, index, type, stalledTime));
       return target;
+    };
+  }
+
+  id(generator, fieldName, dataType) {
+    return (target) => {
+      const mData = this.em.entityMetas.findByClass(target);
+      if (!mData) {
+        throw new Error("target not found");
+      }
+      if (generator) {
+        mData.idGenerator = generator;
+      }
+      if (fieldName) {
+        mData.idFieldName = fieldName;
+      }
+      if (fieldName) {
+        mData.idDataType = dataType;
+      }
+      return target;
+    };
+  }
+
+  configureIdField() {
+    return (target) => {
+      const mData = this.em.entityMetas.findByClass(target);
+      return this.field(mData.idFieldName, mData.idDataType, "not_analyzed")(target)
     };
   }
 
   field(name, type, index) {
     return (target) => {
-      let md;
-      if (!(md = this.em.entityMetas.findByClass(target))) {
+      const mData = this.em.entityMetas.findByClass(target);
+      if (!mData) {
         throw new Error("target not found");
       }
       //_.set(md.mappings, name, type);
       name = _.isArray(name) ? name : name.split(".");
-      let mp = md.mappings;
+      let mp = mData.mappings;
       const len = name.length;
       _.each(name, function (v, i) {
         if (!mp[v]) {

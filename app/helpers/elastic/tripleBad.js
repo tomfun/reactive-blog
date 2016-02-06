@@ -1,4 +1,5 @@
-import _ from "lodash";
+const _ = require("lodash");
+
 /**
  * @param {Object} obj entity
  * @param {Object} oldObj plain object
