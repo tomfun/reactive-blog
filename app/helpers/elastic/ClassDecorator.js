@@ -68,11 +68,11 @@ export default class ClassDecorator {
     this.em = em;
     _.each(_.filter(annotationData, {annotationName: "entity"}), (aData) => {
       const args = aData.args;
-      this.entity(args.name, args.index, args.type, args.stalledTime)(aData.Class);
+      this.entity(args.name, args.index, args.type, args.stalledTime, args.findByIdCacheTime)(aData.Class);
     });
     _.each(_.filter(annotationData, {annotationName: "id"}), (aData) => {
       const args = aData.args;
-      this.id(args.generator, args.fieldName)(aData.Class);
+      this.id(args.generator, args.fieldName, args.dataType)(aData.Class);
     });
     _.each(_.filter(annotationData, {annotationName: "field"}), (aData) => {
       const args = aData.args;
@@ -90,7 +90,7 @@ export default class ClassDecorator {
   entity(entityName, indexName, type, stalledTime = 300000, findByIdCacheTime = 100) {
     return (target) => {
       const mData = this.em.entityMetas.findByClass(target);
-      const name = entityName || target.constructor.name;
+      const name = entityName || target.name;
       if (!name && !mData) {
         throw new Error("Name of entity id required");
       }
@@ -216,8 +216,8 @@ export default class ClassDecorator {
      o 1:1 - id в объекте
      */
     _.defaultsDeep(options, {
-      nullable:      true,
-      cascade:       {
+      nullable: true,
+      cascade:  {
         remove:  CASCADE_REMOVE_TYPE.CASCADE,
         update:  true,
         merge:   true,
@@ -225,28 +225,33 @@ export default class ClassDecorator {
         refresh: true,
         create:  true,
       },
+
       orphanRemoval: false,
     });
     const relations = this.em.uow.relations;
     const manager = this.em;
     return (target) => {
       const targetMetadata = this.em.entityMetas.findByClass(target);
+      const joinMetadataFindMethod = _.isString(cls) ? "findByName" : "findByClass";
+      const joinedMetadata = this.em.entityMetas[joinMetadataFindMethod](cls);
+      const joinedClass = joinedMetadata.Class;
       if (!options.wrongJoinTypeErrorMessage) {
-        options.wrongJoinTypeErrorMessage = "Wrong type of value for " + name + " field in " + targetMetadata.name;
+        options.wrongJoinTypeErrorMessage =
+          "Wrong type of value for " + name + " field in " + targetMetadata.name;
       }
-      //todo: str cls -> class
-      targetMetadata.joins.push(new JoinMetadata(name, cls, fieldName, type, options));
+      targetMetadata.joins.push(new JoinMetadata(name, joinedClass, fieldName, type, options));
       Object.defineProperty(target.prototype, name, {
         configurable: true,
         enumerable:   true,
-        get:          function () {
+
+        get() {
           const relatedValues = relations.get(this);
           if (relatedValues && name in relatedValues) {
             return Promise.resolve(relatedValues[name]);
           }
           if (relatedValues && relatedValues.has(fieldName)) {
             return manager.findById({
-              Class: cls,
+              Class: joinedClass,
               id:    relatedValues.get(fieldName),
             }).then(function (transformedData) {
               this[name] = transformedData;
@@ -255,14 +260,15 @@ export default class ClassDecorator {
           }
           return Promise.resolve(null);
         },
-        set:          function (val) {
+
+        set(val) {
           let relatedValues = relations.get(this);
           if (!relatedValues) {
             relatedValues = new Map();
             relations.set(this, relatedValues);
           }
 
-          validateJoinSet(type, cls, val, options);
+          validateJoinSet(type, joinedClass, val, options);
 
           relatedValues[name] = val;
           return this;

@@ -16,19 +16,29 @@ function save(Class, annotationName, args) {
   return Class;
 }
 
-export function entity(name, index, type, stalledTime) {
+export function entity(name, index, type, stalledTime, findByIdCacheTime) {
   return function (target) {
-    return save(target, "entity", {name, index, type, stalledTime});
+    return save(target, "entity", {name, index, type, stalledTime, findByIdCacheTime});
   };
 }
+
+
+function checkAndSave(Class, annotationName, args) {
+  if (!collection.has(Class)) {
+    entity()(Class);
+  }
+  save(Class, annotationName, args);
+}
+
 /**
  * @param {Function} generator
- * @param {Boolean|String} [fieldName=id] if false id will be hidden
+ * @param {Boolean|String} [fieldName=id]
+ * @param {Boolean|String} [dataType=FIELD_TYPES.STRING] if false id will be hidden
  * @returns {Function}
  */
-export function id(generator, fieldName) {
+export function id(generator, fieldName, dataType) {
   return function (target) {
-    return save(target, "id", {generator, fieldName});
+    return checkAndSave(target, "id", {generator, fieldName, dataType});
   };
 }
 
@@ -40,7 +50,7 @@ export function id(generator, fieldName) {
  */
 export function field(name, type, index) {
   return function (target) {
-    return save(target, "field", {name, index, type});
+    return checkAndSave(target, "field", {name, index, type});
   };
 }
 field.TYPE = FIELD_TYPES;
@@ -70,7 +80,7 @@ field.TYPE = FIELD_TYPES;
  */
 export function join(name, cls, fieldName, type, options) {
   return function (target) {
-    return save(target, "join", {name, cls, fieldName, type, options});
+    return checkAndSave(target, "join", {name, cls, fieldName, type, options});
   };
 }
 join.TYPE = JOIN_TYPES;
@@ -80,7 +90,7 @@ export function importMetadata(filter) {
   let res = [];
   for (const [Class, aDataArray] of collection) {
     _.each(aDataArray, (aData) => {
-      let data = _.cloneDeep(aData);
+      const data = _.cloneDeep(aData);
       data.Class = Class;
       res.push(data);
     });

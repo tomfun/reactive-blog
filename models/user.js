@@ -18,23 +18,27 @@ class Post
 
 let manager = new DefaultManager();
 //manager.createTypes();
+console.log(manager.entityMetas.array[1])
 
 
 setTimeout(function () {
-  //console.log("\n\n")
-  //console.log(Post);
-  //var p = new Post();
-  //p.title = "новый пост";
-  //console.log(p);
-  //p.author = null;
-  //console.log(p.author = [new User()]);
-  //p.author.then(function (data) {
-  //  let author = data[0];
-  //  author.name = "новый пользователь";
-  //  author.email = "some@mail.ru";
-  //});
-  //console.log(p);
-  //console.log("\n\n\n")
+  console.log("\n\n")
+  console.log(Post);
+  var p = new Post();
+  p.title = "новый пост";
+  console.log(p);
+  p.author = null;
+  console.log(p.author = [new User()]);
+  p.author.then(function (data) {
+    let author = data[0];
+    author.name = "новый пользователь";
+    author.email = "some@mail.ru";
+  });
+  p.author.then(function (data) {
+    console.log(p);
+    console.log(data);
+  });
+  console.log("\n\n\n")
   //manager.create(p);
 
   //manager.findOne({Class: Post, id: 'ek1gneaox'}).then(function (data) {

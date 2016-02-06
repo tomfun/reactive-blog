@@ -153,7 +153,7 @@ class Uow {
     if (!metadata) {
       throw new TypeError("Type not found");
     }
-    const cacheKey = "transformSingleResult_" + data._index + "/_/" + data._type + data._id;
+    //todo
     this.cacheKeys.set(mappedObject, cacheKey);
   }
 
@@ -167,12 +167,13 @@ class Uow {
   }
 
   detach(mappedObject) {
-    let cacheKey = this.cacheKeys.get(mappedObject);
+    const cacheKey = this.cacheKeys.get(mappedObject);
     if (cacheKey) {
       this.rawSources.delete(mappedObject);
       this.cacheKeys.delete(mappedObject);
       this.em.simpleCacher.delete(cacheKey);
     }
+    //cascade?
   }
 
   refresh(mappedObject, stalledTime) {

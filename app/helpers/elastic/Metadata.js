@@ -11,6 +11,7 @@ export default class MetaData {
     this.findByIdCacheTime = findByIdCacheTime === undefined ? 0.1 : findByIdCacheTime;
     this.joins = [];
     this.idFieldName = "id";
+    this.idDataType = "string";
     this.idGenerator = shortid.generate;
   }
 
