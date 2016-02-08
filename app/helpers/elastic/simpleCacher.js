@@ -6,7 +6,9 @@ let minTime = 1;
 
 function scheduleClear() {
   process.nextTick(function () {
-    if (timer) {return;}
+    if (timer) {
+      return;
+    }
     timer = setTimeout(clear, minTime);
   });
 }
@@ -49,6 +51,7 @@ export default {
       scheduleClear();
     }
   },
+
   get: function (key) {
     let res = cache.get(key);
     if (res) {
@@ -58,11 +61,26 @@ export default {
       cache.delete(key);
     }
   },
+
   delete: function (key) {
     cache.delete(key);
   },
+
   size() {
     clear();
     return cache.size;
+  },
+
+  forEach(cb, newThis) {
+    //value, key
+    const fnn = arguments.length > 1 ? cb.bind(newThis) : cb;
+    cache.forEach((res, key) => {
+      if (res) {
+        if (res.ttl > Date.now()) {
+          return fnn(res.data, key);
+        }
+        cache.delete(key);
+      }
+    });
   }
 };

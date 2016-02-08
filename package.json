@@ -47,7 +47,7 @@
     "gulp-watch": "^4.3.5",
     "history": "^1.17.0",
     "l10ns": "^2.2.5",
-    "lodash": "^4.1.0",
+    "lodash": "^4.3.0",
     "log4js": "^0.6.29",
     "main-bower-files": "^2.11.1",
     "marked": "^0.3.5",

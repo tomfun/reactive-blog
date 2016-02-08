@@ -3,14 +3,30 @@ const _ = require("lodash");
 import tripleBad from "./tripleBad";
 
 class Uow {
+  /**
+   * @param {ElasticManager} em
+   */
   constructor(em) {
     this.em = em;
     this.indexName = em.configuration.indexName;
-    this.entityMetas = this.em.entityMetas;
+    this.entityMetas = em.entityMetas;
     this.rawSources = new WeakMap();
     this.cacheKeys = new WeakMap();
-    this.alreadyCreated = new WeakMap();//?!!
     this.relations = new WeakMap();
+    this.markedForCreate = new Set();//?!!
+    this.markedForRemove = new Set();//?!!
+    this.markedForUpdate = new Set();//?!!
+  }
+
+  flush(entites) {
+    const scheduledForRemove = this.getForUpdate(entites)
+    const scheduledForCreate = this.getForUpdate(entites)
+    //check removed entity create
+    const scheduledForUpdate = this.getForUpdate(entites)
+    //check updating entity create, remove
+
+    //check different object with same id
+    doWork
   }
 
   /**
@@ -40,7 +56,13 @@ class Uow {
       resultObject = new mData.Class();
     }
     const relationFields = _.map(mData.joins, "fieldName");
-    _.extend(resultObject, _.omit(data._source, relationFields));
+    _.extend(resultObject, _.omit(data._source, _.union(relationFields, [mData.idFieldName])));
+    Object.defineProperty(resultObject, mData.idFieldName, {
+      enumerable:   true,
+      configurable: true,
+      writable:     false,
+      value:        data._id
+    });
     const relatedValues = new Map();
     _.each(relationFields, function (fieldName) {
       if (data._source[fieldName] !== undefined) {
@@ -149,21 +171,116 @@ class Uow {
   }
 
   persist(mappedObject) {
-    let metadata = this.entityMetas.findByClass(mappedObject.constructor);
-    if (!metadata) {
+    if (!this.entityMetas.findByClass(mappedObject.constructor)) {
       throw new TypeError("Type not found");
     }
-    //todo
-    this.cacheKeys.set(mappedObject, cacheKey);
+    if (this.cacheKeys.get(mappedObject)) {
+      //todo: cascade persist except this entity
+      /*
+       The semantics of the persist operation, applied on an entity X, are as follows:
+
+       If X is a new entity, it becomes managed. The entity X will be entered into the database as a result of the flush operation.
+       If X is a preexisting managed entity, it is ignored by the persist operation. However, the persist operation is cascaded to entities referenced by X, if the relationships from X to these other entities are mapped with cascade=PERSIST or cascade=ALL (see “Transitive Persistence”).
+       If X is a removed entity, it becomes managed.
+
+       */
+      return;
+    }
+    this.markedForCreate.add(mappedObject);
   }
 
   remove(mappedObject) {
-    let metadata = this.entityMetas.findByClass(mappedObject.constructor);
-    if (!metadata) {
+    if (!this.entityMetas.findByClass(mappedObject.constructor)) {
       throw new TypeError("Type not found");
     }
-    return metadata.remove(client, mappedObject.id);
-    //todo: cascade delete, update
+    /*
+     The semantics of the remove operation, applied to an entity X are as follows:
+
+     If X is a new entity, it is ignored by the remove operation. However, the remove operation is cascaded to entities referenced by X, if the relationship from X to these other entities is mapped with cascade=REMOVE or cascade=ALL (see “Transitive Persistence”).
+     If X is a managed entity, the remove operation causes it to become removed. The remove operation is cascaded to entities referenced by X, if the relationships from X to these other entities is mapped with cascade=REMOVE or cascade=ALL (see “Transitive Persistence”).
+     If X is a detached entity, an InvalidArgumentException will be thrown.
+     If X is a removed entity, it is ignored by the remove operation.
+     A removed entity X will be removed from the database as a result of the flush operation.
+     */
+    this.markedForRemove.add(mappedObject);
+  }
+
+  isNeedUpdate(mappedObject) {
+    //todo: check need update
+    return true;
+  }
+
+  getForUpdate(mappedObject, excludeSet = new Set()) {
+    let startObjects;
+
+    function startUpdate(obj, key) {
+      if (
+        /*_.isString(key)
+         && key.indexOf("transformSingleResult_") === 0
+         &&*/ this.cacheKeys.has(obj)
+      ) {
+        if (this.markedForRemove.has(obj)) {
+          return;
+        }
+        startObjects.push(obj);
+        if (!this.isNeedUpdate(obj)) {
+          excludeSet.add(obj);
+        }
+      }
+    }
+
+    if (!mappedObject) {
+      startObjects = [];
+      this.em.simpleCacher.forEach(startUpdate, this);
+      this.markedForUpdate.forEach(startUpdate, this);
+    } else {
+      startObjects = mappedObject;
+    }
+
+    if (startObjects && _.isArray(startObjects)) {
+      const result = _.reduce(startObjects, (acc, obj) => {
+        return _.union(acc, this.getForUpdate(obj, excludeSet));
+      }, []);
+      return _.filter(result, (obj) => {
+        return excludeSet.has(obj);
+      });
+    }
+
+    const mData = this.entityMetas.findByClass(mappedObject.constructor);
+    const relatedValues = this.relations.get(mappedObject);
+    const needUpdate = this.isNeedUpdate(mappedObject);
+    if (!relatedValues || !relatedValues.size || !mData.joins.length) { // :)
+      return needUpdate ? [mappedObject] : [];
+    }
+
+    return _.chain(mData.joins)
+      .filter((join) => join.options.cascade.update)
+      .filter((join) => relatedValues.has(join.name))
+      .map((join) => {
+        const rVal = relatedValues.get(join.name);
+        return _.isArray(rVal) ? rVal : [rVal];
+      })
+      .reduce((acc, objArr) => {
+        const filteredObjArray = _.filter(objArr, (obj) => {
+          return !excludeSet.has(obj);
+        });
+        return _.union(acc, filteredObjArray);
+      }, [])
+      .reduce((acc, obj) => {
+        //todo: recursive
+        //return !excludeSet.has(obj) && this.isNeedUpdate(obj);
+        excludeSet.add(obj);//todo
+        return _.union(acc, this.getForUpdate(obj, excludeSet));
+      }, [])
+      .value()
+      .concat(needUpdate ? [mappedObject] : []);//todo
+  }
+
+  update(mappedObject) {
+    if (!this.entityMetas.findByClass(mappedObject.constructor)) {
+      throw new TypeError("Type not found");
+    }
+    this.markedForUpdate.add(mappedObject);
   }
 
   detach(mappedObject) {
@@ -173,7 +290,9 @@ class Uow {
       this.cacheKeys.delete(mappedObject);
       this.em.simpleCacher.delete(cacheKey);
     }
-    //cascade?
+    this.markedForCreate.delete(mappedObject);
+    this.markedForRemove.delete(mappedObject);
+    this.markedForUpdate.delete(mappedObject);
   }
 
   refresh(mappedObject, stalledTime) {
@@ -182,8 +301,8 @@ class Uow {
     if (!source) {
       throw new Error("Nothing to refresh");
     }
-    stalledTime = stalledTime || this.entityMetas.findByClass(mappedObject.constructor).stalledTime;
-    this.em.simpleCacher.set(cacheKey, mappedObject, stalledTime);
+    const ttl = stalledTime || this.entityMetas.findByClass(mappedObject.constructor).stalledTime;
+    this.em.simpleCacher.set(cacheKey, mappedObject, ttl);
     return this.em.client.get({
       index: source._index,
       type:  source._type,
@@ -192,11 +311,6 @@ class Uow {
       this.transformSingleResult(data, true);
     });
   }
-
-  update(mappedObject) {
-    //filter id
-  }
-
 }
 
 export default Uow;

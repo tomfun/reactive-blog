@@ -1,6 +1,9 @@
 const _ = require("lodash");
 
 class Repository {
+  /**
+   * @param {ElasticManager} em
+   */
   constructor(em) {
     this.em = em;
   }
